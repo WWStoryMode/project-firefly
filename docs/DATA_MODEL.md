@@ -32,31 +32,43 @@ Project Firefly uses PostgreSQL (via Supabase) with the PostGIS extension for ge
     │             │         │...                │
     │             │         └─────────┬─────────┘
     │             │                   │
-    ▼             │                   ▼
-┌────────────┐    │         ┌─────────────────────┐
-│menu_items  │    │         │order_status_history │
-│────────────│    │         │─────────────────────│
-│id (PK)     │    │         │id (PK)              │
-│vendor_id   │    │         │order_id             │
-│name        │    │         │status               │
-│price       │    │         │changed_by           │
-│...         │    │         │timestamp            │
-└────────────┘    │         └─────────────────────┘
-                  │
+    ▼             │         ┌─────────┼─────────┐
+┌────────────┐    │         │         │         │
+│menu_items  │    │         ▼         ▼         ▼
+│────────────│    │  ┌───────────┐ ┌───────────┐ ┌───────────┐
+│id (PK)     │    │  │order_     │ │order_     │ │delivery_  │
+│vendor_id   │    │  │status_    │ │chats      │ │assignments│
+│name        │    │  │history    │ │───────────│ │───────────│
+│price       │    │  │───────────│ │id (PK)    │ │id (PK)    │
+│...         │    │  │id (PK)    │ │order_id   │ │order_id   │
+└────────────┘    │  │order_id   │ │is_active  │ │delivery_  │
+                  │  │status     │ │created_at │ │person_id  │
+                  │  │changed_by │ │closed_at  │ │status     │
+                  │  │timestamp  │ └─────┬─────┘ └───────────┘
+                  │  └───────────┘       │
+                  │                      ▼
+                  │               ┌─────────────┐
+                  │               │chat_messages│
+                  │               │─────────────│
+                  │               │id (PK)      │
+                  │               │chat_id      │
+                  │               │sender_id    │
+                  │               │message      │
+                  │               │created_at   │
+                  │               └─────────────┘
     ┌─────────────┴──────────────┐
     │                            │
-    ▼                            ▼
-┌─────────────────────┐  ┌─────────────────────┐
-│delivery_            │  │delivery_            │
-│registrations        │  │assignments          │
-│─────────────────────│  │─────────────────────│
-│id (PK)              │  │id (PK)              │
-│delivery_person_id   │  │order_id             │
-│vendor_id            │  │delivery_person_id   │
-│status               │  │status               │
-│timeslots            │  │offered_at           │
-└─────────────────────┘  │responded_at         │
-                         └─────────────────────┘
+    ▼                            │
+┌─────────────────────┐          │
+│delivery_            │          │
+│registrations        │          │
+│─────────────────────│          │
+│id (PK)              │          │
+│delivery_person_id   │◀─────────┘
+│vendor_id            │
+│status               │
+│timeslots            │
+└─────────────────────┘
 ```
 
 ---
@@ -206,7 +218,7 @@ Customer orders.
 | customer_id | uuid | FK → users.id, NOT NULL | Customer who placed order |
 | vendor_id | uuid | FK → vendors.id, NOT NULL | Vendor receiving order |
 | delivery_person_id | uuid | FK → delivery_persons.id | Assigned delivery person |
-| status | text | NOT NULL, default 'placed', CHECK (status IN ('placed', 'accepted', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled')) | Current order status |
+| status | text | NOT NULL, default 'pending', CHECK (status IN ('pending', 'confirmed', 'preparing', 'ready', 'picked_up', 'delivered', 'cancelled')) | Current order status |
 | items | jsonb | NOT NULL | Snapshot of ordered items |
 | subtotal | integer | NOT NULL, CHECK (subtotal >= 0) | Item total in cents |
 | delivery_fee | integer | NOT NULL, default 0, CHECK (delivery_fee >= 0) | Delivery fee in cents |
@@ -283,6 +295,51 @@ Tracks delivery offers and responses.
 
 ---
 
+### order_chats
+
+Group chat sessions for confirmed orders. Created when delivery person accepts assignment.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | uuid | PK, default uuid_generate_v4() | Unique identifier |
+| order_id | uuid | FK → orders.id, NOT NULL, UNIQUE | Associated order |
+| is_active | boolean | NOT NULL, default true | Whether chat is open |
+| created_at | timestamptz | NOT NULL, default now() | Chat creation time |
+| closed_at | timestamptz | | When chat was closed |
+
+**Indexes:**
+- `order_chats_order_id_idx` on `order_id`
+
+**Notes:**
+- One chat per order (1:1 relationship)
+- Chat created when order status changes to `confirmed`
+- Chat closed when order status changes to `delivered`
+- Participants are automatically: customer, vendor user, delivery person user
+
+---
+
+### chat_messages
+
+Messages within order group chats.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | uuid | PK, default uuid_generate_v4() | Unique identifier |
+| chat_id | uuid | FK → order_chats.id, NOT NULL | Parent chat |
+| sender_id | uuid | FK → users.id, NOT NULL | User who sent message |
+| message | text | NOT NULL | Message content |
+| created_at | timestamptz | NOT NULL, default now() | Message timestamp |
+
+**Indexes:**
+- `chat_messages_chat_id_idx` on `chat_id`
+- `chat_messages_created_at_idx` on `created_at`
+
+**Notes:**
+- Messages are immutable (no editing/deleting)
+- Stored for dispute resolution and audit purposes
+
+---
+
 ## Row Level Security (RLS) Policies
 
 ### users
@@ -324,6 +381,18 @@ Tracks delivery offers and responses.
 - Delivery person can update (accept/reject) their assignments
 - Vendor can read assignments for their orders
 - Admins can read all assignments
+
+### order_chats
+- Customer can read chat for their order
+- Vendor can read chat for orders to their shop
+- Delivery person can read chat for their assigned orders
+- Admins can read all chats
+
+### chat_messages
+- Participants can read messages in their order's chat
+- Participants can insert messages in their order's chat (if chat is active)
+- No one can update or delete messages
+- Admins can read all messages
 
 ---
 
@@ -436,6 +505,36 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER orders_status_history
   AFTER UPDATE ON orders
   FOR EACH ROW EXECUTE FUNCTION log_order_status_change();
+```
+
+### manage_order_chat
+
+Automatically creates chat when order is confirmed and closes it when delivered.
+
+```sql
+CREATE OR REPLACE FUNCTION manage_order_chat()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Create chat when order is confirmed
+  IF OLD.status = 'pending' AND NEW.status = 'confirmed' THEN
+    INSERT INTO order_chats (order_id)
+    VALUES (NEW.id);
+  END IF;
+
+  -- Close chat when order is delivered
+  IF NEW.status = 'delivered' THEN
+    UPDATE order_chats
+    SET is_active = false, closed_at = now()
+    WHERE order_id = NEW.id;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER orders_chat_management
+  AFTER UPDATE ON orders
+  FOR EACH ROW EXECUTE FUNCTION manage_order_chat();
 ```
 
 ---

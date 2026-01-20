@@ -39,10 +39,16 @@ Project Firefly is an open-source, self-hostable food ordering and delivery plat
 2. **View menu** - See vendor's available items
 3. **Add to cart** - Build order from menu items
 4. **Checkout** - Provide delivery address and notes
-5. **Receive confirmation** - Order placed successfully
-6. **Track status** - Real-time updates through order lifecycle:
-   - `placed` → `accepted` → `preparing` → `ready` → `picked_up` → `delivered`
-7. **Complete order** - Mark delivered or report issue
+5. **Wait for confirmation** - System finds available delivery person
+   - Order is `pending` until delivery person accepts
+   - If no delivery available, order is cancelled
+6. **Order confirmed** - Delivery person assigned
+   - Group chat created with customer, vendor, and delivery person
+   - All three parties can see each other and communicate
+7. **Track status** - Real-time updates through order lifecycle:
+   - `confirmed` → `preparing` → `ready` → `picked_up` → `delivered`
+8. **Communicate** - Use group chat to coordinate with vendor and delivery
+9. **Complete order** - Chat closes when order is delivered
 
 ### Vendor Flow
 
@@ -60,11 +66,13 @@ Project Firefly is an open-source, self-hostable food ordering and delivery plat
    - View delivery person registration requests
    - See their available timeslots
    - Auto-accept or manually approve/reject
-4. **Receive orders** - Real-time notifications
+4. **Receive confirmed orders** - Real-time notifications
+   - Orders arrive only after delivery person is assigned
+   - Group chat already active with customer and delivery person
 5. **Process orders**
-   - Accept or reject incoming orders
    - Mark as `preparing`
    - Mark as `ready for pickup`
+   - Communicate with customer and delivery via group chat
 6. **View history** - Order history and basic statistics
 
 ### Delivery Person Flow
@@ -77,32 +85,42 @@ Project Firefly is an open-source, self-hostable food ordering and delivery plat
    - Set available timeslots per vendor
    - Example: Mon 11am-2pm, 6pm-9pm
 3. **Wait for approval** - Vendor reviews and approves
-4. **Receive assignments** - Push notification or in-app
+4. **Receive assignments** - Push notification or in-app (immediate when customer orders)
 5. **Accept or reject** - If rejected, goes to next in queue
-6. **Pick up order** - Mark `picked_up`
-7. **Deliver order** - Mark `delivered`
-8. **View history** - Delivery history and earnings
+   - Accepting confirms the order for all parties
+   - Group chat created with customer and vendor
+6. **Coordinate** - Use group chat to communicate with customer and vendor
+7. **Pick up order** - Mark `picked_up`
+8. **Deliver order** - Mark `delivered`, chat closes
+9. **View history** - Delivery history and earnings
 
 ---
 
 ## Delivery Assignment Algorithm
 
-When an order is ready for pickup:
+**Triggered immediately when customer places order** (before order is confirmed):
 
 ```
-1. Get list of approved delivery persons for this vendor
-2. Filter by: currently available (within registered timeslot)
-3. Sort by: distance to vendor (nearest first)
-4. Offer to first in list
-5. If rejected or timeout (2 min), offer to next
-6. Repeat until accepted or list exhausted
-7. If no delivery available, notify vendor to handle manually
+1. Customer submits order (status = "pending")
+2. Get list of approved delivery persons for this vendor
+3. Filter by: currently available (within registered timeslot)
+4. Sort by: distance to vendor (nearest first)
+5. Offer to first in list
+6. If rejected or timeout (2 min), offer to next
+7. Repeat until accepted or list exhausted
+8. If accepted:
+   - Order status changes to "confirmed"
+   - Group chat created for customer, vendor, and delivery person
+   - Vendor notified to start preparing
+9. If no delivery available:
+   - Order is cancelled
+   - Customer notified that no delivery is available
 ```
 
 ### Assignment States
 
 - `offered` - Assignment sent to delivery person
-- `accepted` - Delivery person accepted
+- `accepted` - Delivery person accepted, order confirmed
 - `rejected` - Delivery person declined
 - `expired` - 2-minute timeout reached
 
@@ -112,34 +130,48 @@ When an order is ready for pickup:
 
 ```
 ┌─────────┐
-│ placed  │ ← Customer submits order
+│ pending │ ← Customer submits order, searching for delivery
 └────┬────┘
-     ↓
-┌─────────┐
-│accepted │ ← Vendor accepts order
-└────┬────┘
-     ↓
-┌──────────┐
-│preparing │ ← Vendor starts cooking
-└────┬─────┘
-     ↓
-┌─────────┐
-│  ready  │ ← Order ready, triggers delivery assignment
-└────┬────┘
-     ↓
-┌──────────┐
-│picked_up │ ← Delivery person has the order
-└────┬─────┘
-     ↓
-┌──────────┐
-│delivered │ ← Order delivered to customer
-└──────────┘
-
-Alternative:
-┌──────────┐
-│cancelled │ ← Order cancelled (by customer, vendor, or system)
-└──────────┘
+     │
+     │ Delivery assignment happens immediately
+     │
+     ├──────────────────────────────┐
+     ↓                              ↓
+┌───────────┐                 ┌───────────┐
+│ confirmed │                 │ cancelled │ ← No delivery available
+└─────┬─────┘                 └───────────┘
+      │
+      │ Group chat created (Customer + Vendor + Delivery)
+      │ All parties can see each other
+      ↓
+┌───────────┐
+│ preparing │ ← Vendor starts cooking
+└─────┬─────┘
+      ↓
+┌───────────┐
+│   ready   │ ← Order ready for pickup
+└─────┬─────┘
+      ↓
+┌───────────┐
+│ picked_up │ ← Delivery person has the order
+└─────┬─────┘
+      ↓
+┌───────────┐
+│ delivered │ ← Order delivered, chat closed
+└───────────┘
 ```
+
+### Order Status Definitions
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Order submitted, system searching for available delivery person |
+| `confirmed` | Delivery person assigned, group chat created, vendor notified |
+| `preparing` | Vendor is preparing the order |
+| `ready` | Order ready for pickup |
+| `picked_up` | Delivery person has collected the order |
+| `delivered` | Order delivered to customer, chat closed |
+| `cancelled` | Order cancelled (no delivery available or user cancelled) |
 
 ---
 
@@ -151,17 +183,28 @@ Alternative:
    - Customer subscribes to their order
    - Receives instant status change notifications
 
-2. **New order notifications**
+2. **Confirmed order notifications**
    - Vendor subscribes to orders table
-   - Receives notification when new order placed
+   - Receives notification when order is confirmed (delivery assigned)
 
 3. **Delivery assignments**
    - Delivery person subscribes to assignments
-   - Receives offer when assignment created
+   - Receives offer immediately when customer places order
 
-4. **Delivery queue updates**
-   - Vendor can see assignment progress
-   - Knows when delivery is accepted/rejected
+4. **Group chat** (NEW)
+   - Created when order is confirmed
+   - All three parties (customer, vendor, delivery) join automatically
+   - Real-time messaging between all participants
+   - Presence indicators show who's online
+   - Chat closes automatically when order is delivered
+
+### Group Chat Features
+
+- **Participants**: Customer, Vendor, Delivery Person
+- **Visibility**: All parties can see each other's names
+  - Delivery person also sees addresses for pickup/delivery
+- **Lifecycle**: Created on confirmation, closed on delivery
+- **History**: Messages stored for dispute resolution
 
 ---
 

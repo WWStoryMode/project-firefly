@@ -91,20 +91,51 @@ Customer Places Order
 │  POST /api/     │
 │  orders         │
 └────────┬────────┘
-         │ Validate + Insert
+         │
          ▼
 ┌─────────────────┐
-│  Supabase       │
-│  PostgreSQL     │
-│  orders table   │
+│  Create Order   │
+│  status=pending │
 └────────┬────────┘
-         │ Trigger
+         │
          ▼
-┌─────────────────┐      ┌─────────────────┐
-│  Supabase       │─────▶│  Vendor         │
-│  Realtime       │      │  Dashboard      │
-│  Broadcast      │      │  (New Order!)   │
-└─────────────────┘      └─────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│              DELIVERY ASSIGNMENT (IMMEDIATE)             │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │  Find available delivery persons for vendor      │    │
+│  │  Offer assignment to nearest available           │    │
+│  └─────────────────────────────────────────────────┘    │
+└────────────────────────┬────────────────────────────────┘
+                         │
+          ┌──────────────┴──────────────┐
+          │                             │
+          ▼                             ▼
+┌─────────────────┐           ┌─────────────────┐
+│ Delivery Found  │           │  No Delivery    │
+│ & Accepted      │           │  Available      │
+└────────┬────────┘           └────────┬────────┘
+         │                             │
+         ▼                             ▼
+┌─────────────────┐           ┌─────────────────┐
+│ Order CONFIRMED │           │ Order CANCELLED │
+│ status=confirmed│           │ Notify customer │
+└────────┬────────┘           └─────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│                  CREATE GROUP CHAT                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
+│  │  Customer   │  │   Vendor    │  │  Delivery   │     │
+│  └─────────────┘  └─────────────┘  └─────────────┘     │
+│           All parties can see each other                 │
+│           Real-time messaging enabled                    │
+└────────────────────────┬────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Vendor notified│
+│  to prepare     │
+└─────────────────┘
 ```
 
 ---
@@ -112,104 +143,154 @@ Customer Places Order
 ## Order Lifecycle
 
 ```
-┌──────────┐     ┌──────────┐     ┌───────────┐     ┌─────────┐
-│  placed  │────▶│ accepted │────▶│ preparing │────▶│  ready  │
-└──────────┘     └──────────┘     └───────────┘     └────┬────┘
-     │                                                    │
-     │ cancelled                         Delivery Assignment
-     ▼                                                    │
-┌───────────┐                                            ▼
-│ cancelled │                              ┌─────────────────────┐
-└───────────┘                              │ Delivery Assignment │
-                                           │     Algorithm       │
-                                           └──────────┬──────────┘
-                                                      │
-                                                      ▼
-                                           ┌─────────────────────┐
-                                           │ Available Delivery  │
-                                           │ Person Notified     │
-                                           └──────────┬──────────┘
-                                                      │
-                                    ┌─────────────────┼─────────────────┐
-                                    │                 │                 │
-                                    ▼                 ▼                 ▼
-                              ┌──────────┐     ┌──────────┐     ┌───────────┐
-                              │ accepted │     │ rejected │     │  expired  │
-                              └────┬─────┘     └────┬─────┘     └─────┬─────┘
-                                   │                │                 │
-                                   │                └────────┬────────┘
-                                   │                         │
-                                   │                         ▼
-                                   │               ┌─────────────────────┐
-                                   │               │   Next in Queue     │
-                                   │               │   or Manual Assign  │
-                                   │               └─────────────────────┘
-                                   ▼
-                            ┌───────────┐
-                            │ picked_up │
-                            └─────┬─────┘
-                                  │
-                                  ▼
-                            ┌───────────┐
-                            │ delivered │
-                            └───────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         ORDER PLACEMENT PHASE                              │
+└───────────────────────────────────────────────────────────────────────────┘
+
+┌──────────┐
+│ pending  │ ◀── Customer submits order
+└────┬─────┘
+     │
+     │ Immediate delivery assignment
+     ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  DELIVERY ASSIGNMENT LOOP                        │
+│                                                                  │
+│   ┌─────────────────┐                                           │
+│   │ Offer to next   │◀─────────────────────────┐                │
+│   │ available       │                          │                │
+│   └────────┬────────┘                          │                │
+│            │                                   │                │
+│   ┌────────┼────────┬──────────────┐          │                │
+│   │        │        │              │          │                │
+│   ▼        ▼        ▼              ▼          │                │
+│ ┌────┐  ┌────┐  ┌────────┐  ┌──────────┐     │                │
+│ │ ✓  │  │ ✗  │  │timeout │  │ no more  │     │                │
+│ └──┬─┘  └──┬─┘  └───┬────┘  │ available│     │                │
+│    │       │        │       └────┬─────┘     │                │
+│    │       └────────┴────────────┼───────────┘                │
+│    │                             │                             │
+└────┼─────────────────────────────┼─────────────────────────────┘
+     │                             │
+     ▼                             ▼
+┌───────────┐               ┌───────────┐
+│ confirmed │               │ cancelled │
+│           │               │ (no       │
+│ + Chat    │               │ delivery) │
+│   Created │               └───────────┘
+└─────┬─────┘
+
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         ORDER FULFILLMENT PHASE                            │
+│                     (Group Chat Active for All Parties)                    │
+└───────────────────────────────────────────────────────────────────────────┘
+
+      │
+      ▼
+┌───────────┐
+│ preparing │ ◀── Vendor starts cooking
+└─────┬─────┘
+      │
+      ▼
+┌───────────┐
+│   ready   │ ◀── Food ready for pickup
+└─────┬─────┘
+      │
+      ▼
+┌───────────┐
+│ picked_up │ ◀── Delivery person has the order
+└─────┬─────┘
+      │
+      ▼
+┌───────────┐
+│ delivered │ ◀── Order delivered, chat closed
+└───────────┘
 ```
+
+### Order Status Definitions
+
+| Status | Description |
+|--------|-------------|
+| `pending` | Order submitted, searching for delivery person |
+| `confirmed` | Delivery assigned, group chat created, vendor notified |
+| `preparing` | Vendor is preparing the order |
+| `ready` | Order ready for pickup |
+| `picked_up` | Delivery person has collected the order |
+| `delivered` | Order delivered to customer |
+| `cancelled` | Order cancelled (no delivery available or user cancelled) |
 
 ---
 
 ## Delivery Assignment Algorithm
 
+**Triggered:** Immediately when customer places order (before confirmation)
+
 ```
-                    Order Status = "ready"
-                            │
-                            ▼
-              ┌─────────────────────────────┐
-              │  Get approved delivery      │
-              │  persons for this vendor    │
-              └──────────────┬──────────────┘
-                             │
-                             ▼
-              ┌─────────────────────────────┐
-              │  Filter by:                 │
-              │  • is_active = true         │
-              │  • Within timeslot now      │
-              └──────────────┬──────────────┘
-                             │
-                             ▼
-              ┌─────────────────────────────┐
-              │  Sort by distance           │
-              │  (nearest to vendor first)  │
-              └──────────────┬──────────────┘
-                             │
-                             ▼
-              ┌─────────────────────────────┐
-              │  Offer to #1 in list        │
-              └──────────────┬──────────────┘
-                             │
-            ┌────────────────┼────────────────┐
-            │                │                │
-            ▼                ▼                ▼
-      ┌──────────┐    ┌──────────┐    ┌──────────────┐
-      │ Accepted │    │ Rejected │    │ Timeout 2min │
-      └────┬─────┘    └────┬─────┘    └──────┬───────┘
-           │               │                 │
-           │               └────────┬────────┘
-           │                        │
-           ▼                        ▼
-    ┌─────────────┐        ┌───────────────┐
-    │ Assign to   │        │ More in list? │
-    │ Order       │        └───────┬───────┘
-    └─────────────┘                │
-                          ┌────────┼────────┐
-                          │                 │
-                          ▼                 ▼
-                    ┌──────────┐      ┌───────────┐
-                    │   Yes    │      │    No     │
-                    │ Try next │      │ Notify    │
-                    └────┬─────┘      │ Vendor    │
-                         │            └───────────┘
+              Customer Submits Order
+              (status = "pending")
+                        │
+                        ▼
+          ┌─────────────────────────────┐
+          │  Get approved delivery      │
+          │  persons for this vendor    │
+          └──────────────┬──────────────┘
                          │
-                         └──────▶ (loop back to offer)
+                         ▼
+          ┌─────────────────────────────┐
+          │  Filter by:                 │
+          │  • is_active = true         │
+          │  • Within timeslot now      │
+          └──────────────┬──────────────┘
+                         │
+                         ▼
+          ┌─────────────────────────────┐
+          │  Sort by distance           │
+          │  (nearest to vendor first)  │
+          └──────────────┬──────────────┘
+                         │
+                         ▼
+          ┌─────────────────────────────┐
+          │  Offer to #1 in list        │
+          └──────────────┬──────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        │                │                │
+        ▼                ▼                ▼
+  ┌──────────┐    ┌──────────┐    ┌──────────────┐
+  │ Accepted │    │ Rejected │    │ Timeout 2min │
+  └────┬─────┘    └────┬─────┘    └──────┬───────┘
+       │               │                 │
+       │               └────────┬────────┘
+       │                        │
+       │                        ▼
+       │               ┌───────────────┐
+       │               │ More in list? │
+       │               └───────┬───────┘
+       │                       │
+       │              ┌────────┴────────┐
+       │              │                 │
+       │              ▼                 ▼
+       │        ┌──────────┐      ┌───────────┐
+       │        │   Yes    │      │    No     │
+       │        │ Try next │      │  CANCEL   │
+       │        └────┬─────┘      │  ORDER    │
+       │             │            └───────────┘
+       │             │
+       │             └──────▶ (loop back to offer)
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│          ORDER CONFIRMED                 │
+│  ┌───────────────────────────────────┐  │
+│  │     Create Group Chat             │  │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────┐ │  │
+│  │  │Customer │ │ Vendor  │ │Deliv│ │  │
+│  │  └─────────┘ └─────────┘ └─────┘ │  │
+│  └───────────────────────────────────┘  │
+│  • All parties can see each other       │
+│  • Real-time messaging enabled          │
+│  • Vendor notified to start preparing   │
+└─────────────────────────────────────────┘
 ```
 
 ---
@@ -269,17 +350,114 @@ Customer Places Order
                                                │ total                 │
                                                └───────────┬───────────┘
                                                            │
-                                                           │ order_id
-                                                           ▼
-                                               ┌───────────────────────┐
-                                               │order_status_history   │
-                                               │───────────────────────│
-                                               │ id (PK)               │
-                                               │ order_id (FK)         │
-                                               │ status                │
-                                               │ changed_by            │
-                                               │ timestamp             │
-                                               └───────────────────────┘
+                              ┌─────────────────────────────┼─────────────────┐
+                              │                             │                 │
+                              │ order_id                    │ order_id        │
+                              ▼                             ▼                 │
+                  ┌───────────────────────┐   ┌────────────────────────┐     │
+                  │order_status_history   │   │     order_chats        │     │
+                  │───────────────────────│   │────────────────────────│     │
+                  │ id (PK)               │   │ id (PK)                │     │
+                  │ order_id (FK)         │   │ order_id (FK)          │     │
+                  │ status                │   │ is_active              │     │
+                  │ changed_by            │   │ created_at             │     │
+                  │ timestamp             │   │ closed_at              │     │
+                  └───────────────────────┘   └────────────┬───────────┘     │
+                                                           │                 │
+                                                           │ chat_id         │
+                                                           ▼                 │
+                                              ┌────────────────────────┐     │
+                                              │    chat_messages       │     │
+                                              │────────────────────────│     │
+                                              │ id (PK)                │     │
+                                              │ chat_id (FK)           │     │
+                                              │ sender_id (FK→users)   │     │
+                                              │ message                │     │
+                                              │ created_at             │     │
+                                              └────────────────────────┘     │
+```
+
+---
+
+## Group Chat Architecture
+
+When an order is confirmed (delivery person accepts), a temporary group chat is created connecting all three parties.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           ORDER GROUP CHAT                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────┐       ┌─────────────┐       ┌─────────────┐               │
+│  │  Customer   │       │   Vendor    │       │  Delivery   │               │
+│  │             │       │             │       │   Person    │               │
+│  │  Can see:   │       │  Can see:   │       │  Can see:   │               │
+│  │  • Vendor   │       │  • Customer │       │  • Customer │               │
+│  │    name     │       │    name     │       │    name &   │               │
+│  │  • Delivery │       │  • Delivery │       │    address  │               │
+│  │    name     │       │    name     │       │  • Vendor   │               │
+│  │             │       │             │       │    name &   │               │
+│  │             │       │             │       │    address  │               │
+│  └──────┬──────┘       └──────┬──────┘       └──────┬──────┘               │
+│         │                     │                     │                       │
+│         └─────────────────────┼─────────────────────┘                       │
+│                               │                                              │
+│                               ▼                                              │
+│                    ┌─────────────────────┐                                  │
+│                    │   Supabase Realtime │                                  │
+│                    │   Channel:          │                                  │
+│                    │   order:{order_id}  │                                  │
+│                    └─────────────────────┘                                  │
+│                                                                              │
+│  Features:                                                                   │
+│  • Real-time messaging between all parties                                  │
+│  • Typing indicators                                                        │
+│  • Message history stored in chat_messages table                            │
+│  • Chat automatically closes when order is delivered                        │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                              CHAT LIFECYCLE
+
+     Order Confirmed              Order In Progress           Order Delivered
+     (Delivery Accepts)
+           │                            │                           │
+           ▼                            ▼                           ▼
+    ┌─────────────┐             ┌─────────────┐             ┌─────────────┐
+    │ Chat Created│────────────▶│ Chat Active │────────────▶│ Chat Closed │
+    │             │             │             │             │             │
+    │ • 3 members │             │ • Messages  │             │ • Read-only │
+    │ • Channel   │             │ • Updates   │             │ • Archived  │
+    │   opened    │             │ • Status    │             │             │
+    └─────────────┘             └─────────────┘             └─────────────┘
+```
+
+### Chat Visibility Rules
+
+| Party | Can See | Can Message |
+|-------|---------|-------------|
+| Customer | Vendor name, Delivery name | Yes |
+| Vendor | Customer name, Delivery name | Yes |
+| Delivery | Customer name + address, Vendor name + address | Yes |
+
+### Real-time Implementation
+
+```javascript
+// Subscribe to order chat
+const channel = supabase
+  .channel(`order:${orderId}`)
+  .on('postgres_changes', {
+    event: 'INSERT',
+    schema: 'public',
+    table: 'chat_messages',
+    filter: `chat_id=eq.${chatId}`
+  }, (payload) => {
+    // Display new message
+  })
+  .on('presence', { event: 'sync' }, () => {
+    // Show who's online
+  })
+  .subscribe()
 ```
 
 ---

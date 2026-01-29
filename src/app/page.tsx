@@ -1,137 +1,96 @@
-'use client';
-
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RoleSwitcher } from "@/components/shared/role-switcher";
-import { RoleBadge } from "@/components/shared/role-badge";
-import { useRole } from "@/hooks/use-role";
-import { cn } from "@/lib/utils";
+import { ShoppingBag, Store, Truck } from "lucide-react";
+
+const roles = [
+  {
+    name: "Customer",
+    description: "Browse local vendors, add items to your cart, and place orders for delivery.",
+    href: "/vendors",
+    icon: ShoppingBag,
+    color: "bg-green-500",
+    borderColor: "border-green-500",
+    hoverBg: "hover:bg-green-50",
+  },
+  {
+    name: "Vendor",
+    description: "View incoming orders, update order status, and communicate with customers.",
+    href: "/vendor",
+    icon: Store,
+    color: "bg-amber-500",
+    borderColor: "border-amber-500",
+    hoverBg: "hover:bg-amber-50",
+  },
+  {
+    name: "Delivery",
+    description: "Accept delivery requests, navigate to pickups, and complete deliveries.",
+    href: "/delivery",
+    icon: Truck,
+    color: "bg-blue-500",
+    borderColor: "border-blue-500",
+    hoverBg: "hover:bg-blue-50",
+  },
+];
 
 export default function Home() {
-  const { currentRole, roleName } = useRole();
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold">Firefly</span>
-            <RoleBadge role={currentRole} size="sm" />
-          </div>
-          <RoleSwitcher userInitials="WD" />
+      <header className="border-b bg-background">
+        <div className="container flex h-16 items-center justify-center px-4">
+          <h1 className="text-2xl font-bold">Project Firefly Demo</h1>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container px-4 py-8">
-        <div className="mx-auto max-w-2xl space-y-8">
-          {/* Welcome Card */}
+        <div className="mx-auto max-w-3xl space-y-8">
+          {/* Description */}
+          <div className="text-center space-y-2">
+            <p className="text-lg text-muted-foreground">
+              Community-powered food ordering for local co-ops
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Select a role below to explore the demo
+            </p>
+          </div>
+
+          {/* Role Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            {roles.map((role) => (
+              <Link key={role.name} href={role.href}>
+                <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
+                  <CardHeader className="text-center pb-2">
+                    <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                      <role.icon className="h-6 w-6" />
+                    </div>
+                    <CardTitle className="text-lg">{role.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-center">
+                      {role.description}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          {/* Instructions */}
           <Card>
             <CardHeader>
-              <CardTitle>Welcome to Firefly</CardTitle>
-              <CardDescription>
-                Community-powered food ordering for local co-ops
-              </CardDescription>
+              <CardTitle className="text-lg">How to Test the Full Flow</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-muted-foreground">
-                You are currently viewing as a <strong>{roleName}</strong>.
-                Tap your profile picture in the top right to switch roles.
+              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                <li>Open <strong>3 browser tabs</strong> (or use incognito windows)</li>
+                <li>In Tab 1: Click <strong>Customer</strong> → Browse vendors and place an order</li>
+                <li>In Tab 2: Click <strong>Vendor</strong> → Watch for incoming orders and accept them</li>
+                <li>In Tab 3: Click <strong>Delivery</strong> → Accept the delivery and mark it complete</li>
+              </ol>
+              <p className="text-xs text-muted-foreground pt-2 border-t">
+                All roles see real-time updates via Supabase. Changes in one tab appear instantly in others.
               </p>
-
-              {/* Role-specific content preview */}
-              <div
-                className={cn(
-                  "rounded-lg border-2 p-4",
-                  currentRole === 'customer' && "border-role-customer bg-role-customer/5",
-                  currentRole === 'vendor' && "border-role-vendor bg-role-vendor/5",
-                  currentRole === 'delivery' && "border-role-delivery bg-role-delivery/5"
-                )}
-              >
-                {currentRole === 'customer' && (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Customer View</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Browse local vendors, place orders, and track your deliveries.
-                    </p>
-                  </div>
-                )}
-                {currentRole === 'vendor' && (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Vendor View</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Manage your menu, view incoming orders, and chat with customers.
-                    </p>
-                  </div>
-                )}
-                {currentRole === 'delivery' && (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold">Delivery View</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Set your availability, accept deliveries, and navigate to destinations.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {currentRole === 'customer' && (
-                  <>
-                    <Button className="w-full bg-role-customer hover:bg-role-customer/90">
-                      Browse Vendors
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      My Orders
-                    </Button>
-                  </>
-                )}
-                {currentRole === 'vendor' && (
-                  <>
-                    <Button className="w-full bg-role-vendor hover:bg-role-vendor/90">
-                      View Orders
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      Edit Menu
-                    </Button>
-                  </>
-                )}
-                {currentRole === 'delivery' && (
-                  <>
-                    <Button className="w-full bg-role-delivery hover:bg-role-delivery/90">
-                      Set Availability
-                    </Button>
-                    <Button variant="outline" className="w-full">
-                      Active Deliveries
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Role Badges Demo */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Role System</CardTitle>
-              <CardDescription>
-                Each role has its own color identity
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                <RoleBadge role="customer" />
-                <RoleBadge role="vendor" />
-                <RoleBadge role="delivery" />
-              </div>
             </CardContent>
           </Card>
         </div>

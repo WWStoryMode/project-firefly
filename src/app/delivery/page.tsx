@@ -9,6 +9,11 @@ import { OrderStatusBadge } from '@/components/order-status';
 import { useDeliveryAssignments, updateAssignmentStatus } from '@/hooks/use-orders';
 import type { DeliveryAssignment, OrderWithDetails } from '@/lib/supabase/types';
 
+// Extended order type with vendor_accepted
+interface DeliveryOrder extends OrderWithDetails {
+  vendor_accepted: boolean;
+}
+
 // Demo delivery person ID - in real app this would come from auth
 const DEMO_DELIVERY_PERSON_ID = '30000000-0000-0000-0000-000000000001';
 
@@ -100,7 +105,7 @@ export default function DeliveryDashboard() {
 }
 
 interface AssignmentCardProps {
-  assignment: DeliveryAssignment & { order: OrderWithDetails };
+  assignment: DeliveryAssignment & { order: DeliveryOrder };
   updating: boolean;
   onStatusUpdate: (
     assignmentId: string,
@@ -110,6 +115,8 @@ interface AssignmentCardProps {
 
 function AssignmentCard({ assignment, updating, onStatusUpdate }: AssignmentCardProps) {
   const order = assignment.order;
+  const vendorAccepted = order.vendor_accepted;
+  const deliveryAccepted = assignment.status === 'accepted' || assignment.status === 'picked_up' || assignment.status === 'delivered';
 
   const getNextAction = () => {
     switch (assignment.status) {
@@ -197,8 +204,27 @@ function AssignmentCard({ assignment, updating, onStatusUpdate }: AssignmentCard
           </span>
         </div>
 
+        {/* Acceptance Status */}
+        {order.status === 'pending' && (
+          <div className="flex gap-2 mb-4 text-xs">
+            <span className={`px-2 py-1 rounded ${vendorAccepted ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+              Vendor: {vendorAccepted ? '✓ Accepted' : 'Pending'}
+            </span>
+            <span className={`px-2 py-1 rounded ${deliveryAccepted ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+              You: {deliveryAccepted ? '✓ Accepted' : 'Pending'}
+            </span>
+          </div>
+        )}
+
         {/* Status Message */}
-        {assignment.status === 'accepted' && order.status !== 'ready' && (
+        {assignment.status === 'accepted' && order.status === 'pending' && !vendorAccepted && (
+          <div className="bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 p-3 rounded-lg text-center text-sm mb-4">
+            <Clock className="w-4 h-4 inline mr-2" />
+            You accepted. Waiting for vendor to accept...
+          </div>
+        )}
+
+        {assignment.status === 'accepted' && order.status !== 'ready' && order.status !== 'pending' && (
           <div className="bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 p-3 rounded-lg text-center text-sm mb-4">
             <Package className="w-4 h-4 inline mr-2" />
             Waiting for vendor to prepare order...

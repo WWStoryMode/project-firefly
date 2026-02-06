@@ -1,13 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Store, Clock, ChefHat, Package, Loader2 } from 'lucide-react';
+import { Store, Clock, ChefHat, Package, Loader2, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { OrderStatusBadge } from '@/components/order-status';
-import { useVendorOrders, updateOrderStatus } from '@/hooks/use-orders';
-import type { OrderWithDetails } from '@/lib/supabase/types';
+import { useVendorOrders, updateOrderStatus, vendorAcceptOrder } from '@/hooks/use-orders';
+import type { OrderWithDetails, DeliveryAssignment } from '@/lib/supabase/types';
+
+// Extended order type with delivery assignment and vendor_accepted
+interface VendorOrder extends OrderWithDetails {
+  vendor_accepted: boolean;
+  delivery_assignments?: DeliveryAssignment[];
+}
 
 // Demo vendor ID - in real app this would come from auth
 const DEMO_VENDOR_ID = '10000000-0000-0000-0000-000000000001';
@@ -16,7 +22,18 @@ export default function VendorDashboard() {
   const { orders, loading, error } = useVendorOrders(DEMO_VENDOR_ID);
   const [updating, setUpdating] = useState<string | null>(null);
 
-  const handleStatusUpdate = async (orderId: string, newStatus: 'confirmed' | 'preparing' | 'ready') => {
+  const handleAcceptOrder = async (orderId: string) => {
+    setUpdating(orderId);
+    try {
+      await vendorAcceptOrder(orderId);
+    } catch (err) {
+      console.error('Failed to accept order:', err);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleStatusUpdate = async (orderId: string, newStatus: 'preparing' | 'ready') => {
     setUpdating(orderId);
     try {
       await updateOrderStatus(orderId, newStatus);
@@ -84,8 +101,9 @@ export default function VendorDashboard() {
             {orders.map((order) => (
               <OrderCard
                 key={order.id}
-                order={order}
+                order={order as VendorOrder}
                 updating={updating === order.id}
+                onAccept={handleAcceptOrder}
                 onStatusUpdate={handleStatusUpdate}
               />
             ))}
@@ -97,23 +115,36 @@ export default function VendorDashboard() {
 }
 
 interface OrderCardProps {
-  order: OrderWithDetails;
+  order: VendorOrder;
   updating: boolean;
-  onStatusUpdate: (orderId: string, status: 'confirmed' | 'preparing' | 'ready') => void;
+  onAccept: (orderId: string) => void;
+  onStatusUpdate: (orderId: string, status: 'preparing' | 'ready') => void;
 }
 
-function OrderCard({ order, updating, onStatusUpdate }: OrderCardProps) {
+function OrderCard({ order, updating, onAccept, onStatusUpdate }: OrderCardProps) {
+  // Check if vendor has accepted but waiting for delivery
+  const vendorAccepted = order.vendor_accepted;
+  const deliveryAssignment = order.delivery_assignments?.[0];
+  const deliveryAccepted = deliveryAssignment?.status === 'accepted';
+
   const getNextAction = () => {
-    switch (order.status) {
-      case 'pending':
-        return { label: 'Accept Order', status: 'confirmed' as const, icon: ChefHat };
-      case 'confirmed':
-        return { label: 'Start Preparing', status: 'preparing' as const, icon: ChefHat };
-      case 'preparing':
-        return { label: 'Mark Ready', status: 'ready' as const, icon: Package };
-      default:
-        return null;
+    // Pending and vendor hasn't accepted yet -> show Accept button
+    if (order.status === 'pending' && !vendorAccepted) {
+      return { type: 'accept' as const, label: 'Accept Order', icon: CheckCircle2 };
     }
+    // Pending but vendor accepted -> waiting for delivery (no action)
+    if (order.status === 'pending' && vendorAccepted) {
+      return null;
+    }
+    // Confirmed -> can start preparing
+    if (order.status === 'confirmed') {
+      return { type: 'status' as const, label: 'Start Preparing', status: 'preparing' as const, icon: ChefHat };
+    }
+    // Preparing -> can mark ready
+    if (order.status === 'preparing') {
+      return { type: 'status' as const, label: 'Mark Ready', status: 'ready' as const, icon: Package };
+    }
+    return null;
   };
 
   const nextAction = getNextAction();
@@ -164,7 +195,34 @@ function OrderCard({ order, updating, onStatusUpdate }: OrderCardProps) {
           )}
         </div>
 
-        {nextAction && (
+        {/* Acceptance status indicators */}
+        {order.status === 'pending' && (
+          <div className="flex gap-2 mb-4 text-xs">
+            <span className={`px-2 py-1 rounded ${vendorAccepted ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+              Vendor: {vendorAccepted ? '✓ Accepted' : 'Pending'}
+            </span>
+            <span className={`px-2 py-1 rounded ${deliveryAccepted ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+              Delivery: {deliveryAccepted ? '✓ Accepted' : 'Pending'}
+            </span>
+          </div>
+        )}
+
+        {nextAction?.type === 'accept' && (
+          <Button
+            className="w-full bg-amber-600 hover:bg-amber-700"
+            onClick={() => onAccept(order.id)}
+            disabled={updating}
+          >
+            {updating ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <nextAction.icon className="w-4 h-4 mr-2" />
+            )}
+            {nextAction.label}
+          </Button>
+        )}
+
+        {nextAction?.type === 'status' && (
           <Button
             className="w-full bg-amber-600 hover:bg-amber-700"
             onClick={() => onStatusUpdate(order.id, nextAction.status)}
@@ -177,6 +235,12 @@ function OrderCard({ order, updating, onStatusUpdate }: OrderCardProps) {
             )}
             {nextAction.label}
           </Button>
+        )}
+
+        {order.status === 'pending' && vendorAccepted && !deliveryAccepted && (
+          <p className="text-center text-sm text-amber-600 dark:text-amber-400 py-2">
+            You accepted. Waiting for delivery to accept...
+          </p>
         )}
 
         {order.status === 'ready' && (

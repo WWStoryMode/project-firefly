@@ -76,7 +76,8 @@ export function useVendorOrders(vendorId: string) {
         *,
         vendor:vendors(*),
         items:order_items(*),
-        customer:users!orders_customer_id_fkey(name, phone)
+        customer:users!orders_customer_id_fkey(name, phone),
+        delivery_assignments(*)
       `)
       .eq('vendor_id', vendorId)
       .in('status', ['pending', 'confirmed', 'preparing', 'ready'])
@@ -95,7 +96,7 @@ export function useVendorOrders(vendorId: string) {
 
     refresh();
 
-    // Subscribe to new orders and updates
+    // Subscribe to new orders and updates, as well as delivery assignment changes
     const channel = supabase
       .channel(`vendor-orders-${vendorId}`)
       .on(
@@ -105,6 +106,17 @@ export function useVendorOrders(vendorId: string) {
           schema: 'public',
           table: 'orders',
           filter: `vendor_id=eq.${vendorId}`,
+        },
+        () => {
+          refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'delivery_assignments',
         },
         () => {
           refresh();
@@ -203,6 +215,22 @@ export async function updateOrderStatus(orderId: string, status: Order['status']
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to update order status');
+  }
+
+  return response.json();
+}
+
+// Vendor accepts order (sets vendor_accepted=true, checks if delivery has accepted)
+export async function vendorAcceptOrder(orderId: string) {
+  const response = await fetch(`/api/orders/${orderId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vendor_accept: true }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to accept order');
   }
 
   return response.json();

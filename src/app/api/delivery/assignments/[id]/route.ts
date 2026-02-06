@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import type { DeliveryAssignmentStatus, OrderStatus, DeliveryAssignment } from '@/lib/supabase/types';
+import type { DeliveryAssignmentStatus, OrderStatus, DeliveryAssignment, Order } from '@/lib/supabase/types';
 
-// Map assignment status to order status
-const statusToOrderStatus: Record<DeliveryAssignmentStatus, OrderStatus> = {
-  pending: 'pending',
-  accepted: 'confirmed',
+// Map assignment status to order status (for picked_up and delivered only)
+// 'accepted' now requires AND logic with vendor_accepted
+const statusToOrderStatus: Record<string, OrderStatus> = {
   picked_up: 'picked_up',
   delivered: 'delivered',
 };
@@ -28,12 +27,12 @@ export async function PATCH(
       );
     }
 
-    // Get assignment and order
+    // Get assignment and order (including vendor_accepted flag)
     const { data: assignment, error: fetchError } = await supabase
       .from('delivery_assignments')
-      .select('*, order:orders(*)')
+      .select('*, order:orders(id, status, vendor_accepted)')
       .eq('id', id)
-      .single() as { data: (DeliveryAssignment & { order: { id: string } }) | null; error: unknown };
+      .single() as { data: (DeliveryAssignment & { order: Pick<Order, 'id' | 'status'> & { vendor_accepted: boolean } }) | null; error: unknown };
 
     if (fetchError || !assignment) {
       return NextResponse.json(
@@ -70,13 +69,32 @@ export async function PATCH(
       );
     }
 
-    // Update order status based on assignment status
-    const orderStatus = statusToOrderStatus[status];
-    if (orderStatus && assignment.order_id) {
-      await supabase
-        .from('orders')
-        .update({ status: orderStatus } as Record<string, unknown>)
-        .eq('id', assignment.order_id);
+    // Handle order status updates
+    if (assignment.order_id) {
+      if (status === 'accepted') {
+        // AND logic: only set order to 'confirmed' if vendor has also accepted
+        const vendorAccepted = assignment.order?.vendor_accepted;
+        if (vendorAccepted) {
+          await supabase
+            .from('orders')
+            .update({ status: 'confirmed' } as Record<string, unknown>)
+            .eq('id', assignment.order_id);
+        }
+        // If vendor hasn't accepted yet, order stays 'pending'
+        return NextResponse.json({
+          assignment: updatedAssignment,
+          awaiting_vendor: !vendorAccepted
+        });
+      } else {
+        // For picked_up and delivered, update order status directly
+        const orderStatus = statusToOrderStatus[status];
+        if (orderStatus) {
+          await supabase
+            .from('orders')
+            .update({ status: orderStatus } as Record<string, unknown>)
+            .eq('id', assignment.order_id);
+        }
+      }
     }
 
     return NextResponse.json({ assignment: updatedAssignment });

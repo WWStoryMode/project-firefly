@@ -133,6 +133,7 @@ export interface Database {
           vendor_id: string;
           delivery_person_id: string | null;
           status: OrderStatus;
+          vendor_accepted: boolean;
           total_amount: number;
           delivery_address: string;
           delivery_notes: string | null;
@@ -145,6 +146,7 @@ export interface Database {
           vendor_id: string;
           delivery_person_id?: string | null;
           status?: OrderStatus;
+          vendor_accepted?: boolean;
           total_amount: number;
           delivery_address: string;
           delivery_notes?: string | null;
@@ -157,6 +159,7 @@ export interface Database {
           vendor_id?: string;
           delivery_person_id?: string | null;
           status?: OrderStatus;
+          vendor_accepted?: boolean;
           total_amount?: number;
           delivery_address?: string;
           delivery_notes?: string | null;

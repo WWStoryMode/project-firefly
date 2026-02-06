@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, MapPin, FileText } from 'lucide-react';
@@ -20,8 +20,10 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const orderPlaced = useRef(false);
 
-  if (items.length === 0) {
+  // Only redirect to cart if items are empty AND we haven't just placed an order
+  if (items.length === 0 && !orderPlaced.current) {
     router.push('/cart');
     return null;
   }
@@ -59,6 +61,7 @@ export default function CheckoutPage() {
       }
 
       const { order } = await response.json();
+      orderPlaced.current = true;
       clearCart();
       router.push(`/orders/${order.id}`);
     } catch (err) {

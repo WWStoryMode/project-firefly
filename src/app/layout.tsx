@@ -37,6 +37,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
+          <div className="bg-amber-500 text-white text-center text-xs py-1">
+            DEMO MODE
+          </div>
+        )}
         <RoleProvider>
           <CartProvider>
             {children}

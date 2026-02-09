@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { OrderStatusBadge } from '@/components/order-status';
 import { useVendorOrders, updateOrderStatus, vendorAcceptOrder } from '@/hooks/use-orders';
 import type { OrderWithDetails, DeliveryAssignment } from '@/lib/supabase/types';
+import { DEMO_IDS } from '@/lib/config/demo';
 
 // Extended order type with delivery assignment and vendor_accepted
 interface VendorOrder extends OrderWithDetails {
@@ -15,11 +16,8 @@ interface VendorOrder extends OrderWithDetails {
   delivery_assignments?: DeliveryAssignment[];
 }
 
-// Demo vendor ID - in real app this would come from auth
-const DEMO_VENDOR_ID = '10000000-0000-0000-0000-000000000001';
-
 export default function VendorDashboard() {
-  const { orders, loading, error } = useVendorOrders(DEMO_VENDOR_ID);
+  const { orders, loading, error } = useVendorOrders(DEMO_IDS.VENDOR_ID);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const handleAcceptOrder = async (orderId: string) => {

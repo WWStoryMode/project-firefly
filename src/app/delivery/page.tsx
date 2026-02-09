@@ -8,17 +8,15 @@ import { Separator } from '@/components/ui/separator';
 import { OrderStatusBadge } from '@/components/order-status';
 import { useDeliveryAssignments, updateAssignmentStatus } from '@/hooks/use-orders';
 import type { DeliveryAssignment, OrderWithDetails } from '@/lib/supabase/types';
+import { DEMO_IDS } from '@/lib/config/demo';
 
 // Extended order type with vendor_accepted
 interface DeliveryOrder extends OrderWithDetails {
   vendor_accepted: boolean;
 }
 
-// Demo delivery person ID - in real app this would come from auth
-const DEMO_DELIVERY_PERSON_ID = '30000000-0000-0000-0000-000000000001';
-
 export default function DeliveryDashboard() {
-  const { assignments, loading, error } = useDeliveryAssignments(DEMO_DELIVERY_PERSON_ID);
+  const { assignments, loading, error } = useDeliveryAssignments(DEMO_IDS.DELIVERY_PERSON_ID);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const handleStatusUpdate = async (

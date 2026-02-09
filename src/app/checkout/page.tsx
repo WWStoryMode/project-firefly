@@ -9,9 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/hooks/use-cart';
-
-// Demo customer ID - in real app this would come from auth
-const DEMO_CUSTOMER_ID = '00000000-0000-0000-0000-000000000001';
+import { DEMO_IDS } from '@/lib/config/demo';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -42,7 +40,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_id: DEMO_CUSTOMER_ID,
+          customer_id: DEMO_IDS.CUSTOMER_ID,
           vendor_id: vendorId,
           items: items.map((item) => ({
             menu_item_id: item.menu_item_id,

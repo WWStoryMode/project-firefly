@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth/guard';
 import type { DeliveryAssignmentStatus, OrderStatus, DeliveryAssignment, Order } from '@/lib/supabase/types';
 
 // Map assignment status to order status (for picked_up and delivered only)
@@ -14,6 +15,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError, isDemoMode } = await getAuthenticatedUser();
+    if (!isDemoMode && authError) return unauthorizedResponse();
+
     const { id } = await params;
     const supabase = await createClient();
     const body = await request.json();
@@ -112,6 +116,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError, isDemoMode } = await getAuthenticatedUser();
+    if (!isDemoMode && authError) return unauthorizedResponse();
+
     const { id } = await params;
     const supabase = await createClient();
 

@@ -1,13 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth/guard';
 import type { Order, DeliveryPerson } from '@/lib/supabase/types';
 
 export async function POST(request: NextRequest) {
   try {
+    const { user: authUser, error: authError, isDemoMode } = await getAuthenticatedUser();
+    if (!isDemoMode && authError) return unauthorizedResponse();
+
     const supabase = await createClient();
     const body = await request.json();
 
-    const { vendor_id, items, delivery_address, delivery_notes, customer_id } = body;
+    const { vendor_id, items, delivery_address, delivery_notes, customer_id: bodyCustomerId } = body;
+    const customer_id = isDemoMode ? bodyCustomerId : authUser!.id;
 
     // Validate required fields
     if (!vendor_id || !items?.length || !delivery_address || !customer_id) {
@@ -109,6 +114,9 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const { error: authError, isDemoMode } = await getAuthenticatedUser();
+    if (!isDemoMode && authError) return unauthorizedResponse();
+
     const supabase = await createClient();
     const { searchParams } = new URL(request.url);
 

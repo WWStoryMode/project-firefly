@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { OrderStatusBadge } from '@/components/order-status';
 import { useDeliveryAssignments, updateAssignmentStatus } from '@/hooks/use-orders';
 import type { DeliveryAssignment, OrderWithDetails } from '@/lib/supabase/types';
-import { DEMO_IDS } from '@/lib/config/demo';
+import { useAuth } from '@/hooks/use-auth';
 
 // Extended order type with vendor_accepted
 interface DeliveryOrder extends OrderWithDetails {
@@ -16,7 +16,8 @@ interface DeliveryOrder extends OrderWithDetails {
 }
 
 export default function DeliveryDashboard() {
-  const { assignments, loading, error } = useDeliveryAssignments(DEMO_IDS.DELIVERY_PERSON_ID);
+  const { deliveryPersonId } = useAuth();
+  const { assignments, loading, error } = useDeliveryAssignments(deliveryPersonId!);
   const [updating, setUpdating] = useState<string | null>(null);
 
   const handleStatusUpdate = async (

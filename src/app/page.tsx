@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ShoppingBag, Store, Truck } from "lucide-react";
+import { DEMO_MODE } from "@/lib/config/demo";
 
 const roles = [
   {
@@ -33,6 +35,60 @@ const roles = [
 ];
 
 export default function Home() {
+  if (!DEMO_MODE) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b bg-background">
+          <div className="container flex h-16 items-center justify-center px-4">
+            <h1 className="text-2xl font-bold">Project Firefly</h1>
+          </div>
+        </header>
+
+        <main className="container px-4 py-8">
+          <div className="mx-auto max-w-md space-y-8 text-center">
+            <div className="space-y-2">
+              <p className="text-lg text-muted-foreground">
+                Community-powered food ordering for local co-ops
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Order from local vendors, delivered by your neighbors
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              {roles.map((role) => (
+                <div key={role.name} className="text-center">
+                  <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                    <role.icon className="h-6 w-6" />
+                  </div>
+                  <p className="text-sm font-medium">{role.name}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3">
+              <Link href="/login">
+                <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-base">
+                  Sign In
+                </Button>
+              </Link>
+              <Link href="/register">
+                <Button variant="outline" className="w-full h-12 text-base">
+                  Create Account
+                </Button>
+              </Link>
+              <Link href="/vendors">
+                <Button variant="ghost" className="w-full text-sm text-muted-foreground">
+                  Browse vendors without signing in
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}

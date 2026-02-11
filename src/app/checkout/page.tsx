@@ -9,11 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/hooks/use-cart';
-import { DEMO_IDS } from '@/lib/config/demo';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalAmount, vendorId, clearCart } = useCart();
+  const { userId } = useAuth();
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,7 +41,7 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_id: DEMO_IDS.CUSTOMER_ID,
+          customer_id: userId,
           vendor_id: vendorId,
           items: items.map((item) => ({
             menu_item_id: item.menu_item_id,

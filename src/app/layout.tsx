@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { RoleProvider } from "@/hooks/use-role";
+import { AuthProvider } from "@/hooks/use-auth";
 import { CartProvider } from "@/hooks/use-cart";
 
 const geistSans = Geist({
@@ -43,9 +44,11 @@ export default function RootLayout({
           </div>
         )}
         <RoleProvider>
-          <CartProvider>
-            {children}
-          </CartProvider>
+          <AuthProvider>
+            <CartProvider>
+              {children}
+            </CartProvider>
+          </AuthProvider>
         </RoleProvider>
       </body>
     </html>

@@ -7,6 +7,8 @@ function isPublicRoute(pathname: string): boolean {
   if (publicRoutes.includes(pathname)) return true;
   // /vendors/[id] is also public (browsing)
   if (pathname.startsWith('/vendors/')) return true;
+  // API routes handle their own auth via guard.ts
+  if (pathname.startsWith('/api/')) return true;
   return false;
 }
 

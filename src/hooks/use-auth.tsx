@@ -18,16 +18,16 @@ import type { UserRole } from '@/types';
 interface AuthContextType {
   user: {
     id: string;
-    phone: string;
+    email: string;
     name: string;
     roles: UserRole[];
     default_role?: UserRole;
   } | null;
   session: Session | null;
   loading: boolean;
-  signIn: (phone: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (
-    phone: string,
+    email: string,
     password: string,
     name: string,
     role: UserRole
@@ -44,21 +44,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const DEMO_USERS = {
   customer: {
     id: '00000000-0000-0000-0000-000000000001',
-    phone: '555-0101',
+    email: 'customer@demo.firefly',
     name: 'Demo Customer',
     roles: ['customer'] as UserRole[],
     default_role: 'customer' as UserRole,
   },
   vendor: {
     id: '00000000-0000-0000-0000-000000000002',
-    phone: '555-0102',
+    email: 'maria@demo.firefly',
     name: 'Maria Garcia',
     roles: ['vendor'] as UserRole[],
     default_role: 'vendor' as UserRole,
   },
   delivery: {
     id: '00000000-0000-0000-0000-000000000003',
-    phone: '555-0103',
+    email: 'alex@demo.firefly',
     name: 'Alex Johnson',
     roles: ['delivery'] as UserRole[],
     default_role: 'delivery' as UserRole,
@@ -129,7 +129,7 @@ function ProductionAuthProvider({ children }: { children: ReactNode }) {
       if (profile) {
         setUser({
           id: profile.id,
-          phone: profile.phone || authUser.phone || '',
+          email: profile.email || authUser.email || '',
           name: profile.name,
           roles: profile.roles || ['customer'],
           default_role: profile.default_role,
@@ -190,10 +190,10 @@ function ProductionAuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, fetchUserProfile]);
 
   const signIn = useCallback(
-    async (phone: string, password: string) => {
+    async (email: string, password: string) => {
       if (!supabase) return { error: 'Not initialized' };
       const { error } = await supabase.auth.signInWithPassword({
-        phone,
+        email,
         password,
       });
       if (error) return { error: error.message };
@@ -203,10 +203,10 @@ function ProductionAuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUp = useCallback(
-    async (phone: string, password: string, name: string, role: UserRole) => {
+    async (email: string, password: string, name: string, role: UserRole) => {
       if (!supabase) return { error: 'Not initialized' };
       const { data, error } = await supabase.auth.signUp({
-        phone,
+        email,
         password,
       });
       if (error) return { error: error.message };
@@ -215,9 +215,9 @@ function ProductionAuthProvider({ children }: { children: ReactNode }) {
       // Create public.users record
       const { error: profileError } = await supabase.from('users').insert({
         id: data.user.id,
-        email: '',
+        email,
         name,
-        phone,
+        phone: '',
         roles: [role],
         default_role: role,
       });

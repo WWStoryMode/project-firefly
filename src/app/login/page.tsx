@@ -3,18 +3,21 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Phone, Lock, Loader2 } from 'lucide-react';
+import { Mail, Phone, Lock, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
 import { DEMO_MODE } from '@/lib/config/demo';
 
+type AuthMethod = 'email' | 'phone';
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn } = useAuth();
-  const [phone, setPhone] = useState('');
+  const [method, setMethod] = useState<AuthMethod>('email');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -27,12 +30,12 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phone.trim() || !password) return;
+    if (!email.trim() || !password) return;
 
     setLoading(true);
     setError(null);
 
-    const { error: signInError } = await signIn(phone.trim(), password);
+    const { error: signInError } = await signIn(email.trim(), password);
 
     if (signInError) {
       setError(signInError);
@@ -53,58 +56,98 @@ function LoginForm() {
           </p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                Phone Number
-              </label>
-              <Input
-                type="tel"
-                placeholder="+1 555 000 0000"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="h-12"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Lock className="w-4 h-4" />
-                Password
-              </label>
-              <Input
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-12"
-                required
-              />
-            </div>
-
-            {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-lg text-sm text-center">
-                {error}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-green-600 hover:bg-green-700 h-12 text-base"
-              disabled={loading}
+          {/* Method Tabs */}
+          <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+            <button
+              type="button"
+              onClick={() => { setMethod('email'); setError(null); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-l-lg transition-colors ${
+                method === 'email'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
+              <Mail className="w-4 h-4" />
+              Email
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMethod('phone'); setError(null); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-r-lg transition-colors ${
+                method === 'phone'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              <Phone className="w-4 h-4" />
+              Phone
+            </button>
+          </div>
+
+          {method === 'phone' ? (
+            <div className="text-center py-8">
+              <Phone className="w-10 h-10 mx-auto mb-3 text-gray-400" />
+              <p className="text-gray-600 dark:text-gray-400 font-medium">
+                Phone login coming soon
+              </p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                Use email to sign in for now
+              </p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Email
+                </label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Password
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-12"
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="p-3 bg-red-50 dark:bg-red-950 text-red-600 dark:text-red-400 rounded-lg text-sm text-center">
+                  {error}
+                </div>
               )}
-            </Button>
-          </form>
+
+              <Button
+                type="submit"
+                className="w-full bg-green-600 hover:bg-green-700 h-12 text-base"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
+              </Button>
+            </form>
+          )}
 
           <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
             Don&apos;t have an account?{' '}

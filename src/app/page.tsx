@@ -1,8 +1,11 @@
+'use client';
+
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Store, Truck } from "lucide-react";
+import { ShoppingBag, Store, Truck, LogOut } from "lucide-react";
 import { DEMO_MODE } from "@/lib/config/demo";
+import { useAuth } from "@/hooks/use-auth";
 
 const roles = [
   {
@@ -35,7 +38,63 @@ const roles = [
 ];
 
 export default function Home() {
+  const { user, loading, signOut } = useAuth();
+
   if (!DEMO_MODE) {
+    // Authenticated user: show role-based navigation
+    if (user && !loading) {
+      return (
+        <div className="min-h-screen bg-background">
+          <header className="border-b bg-background">
+            <div className="container flex h-16 items-center justify-between px-4">
+              <h1 className="text-2xl font-bold">Project Firefly</h1>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">{user.name}</span>
+                <Button variant="ghost" size="sm" onClick={signOut}>
+                  <LogOut className="h-4 w-4 mr-1" />
+                  Sign Out
+                </Button>
+              </div>
+            </div>
+          </header>
+
+          <main className="container px-4 py-8">
+            <div className="mx-auto max-w-3xl space-y-8">
+              <div className="text-center space-y-2">
+                <p className="text-lg text-muted-foreground">
+                  Welcome back, {user.name}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Select a role to continue
+                </p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                {roles.map((role) => (
+                  <Link key={role.name} href={role.href}>
+                    <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
+                      <CardHeader className="text-center pb-2">
+                        <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                          <role.icon className="h-6 w-6" />
+                        </div>
+                        <CardTitle className="text-lg">{role.name}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription className="text-center">
+                          {role.description}
+                        </CardDescription>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
+    // Not authenticated: show sign-in / create account
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b bg-background">

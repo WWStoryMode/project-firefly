@@ -4,8 +4,8 @@ import { getAuthenticatedUser, unauthorizedResponse } from '@/lib/auth/guard';
 
 export async function GET(request: NextRequest) {
   try {
-    const { error: authError, isDemoMode } = await getAuthenticatedUser();
-    if (!isDemoMode && authError) return unauthorizedResponse();
+    const { error: authError } = await getAuthenticatedUser();
+    if (authError) return unauthorizedResponse();
 
     const supabase = await createClient();
     const { searchParams } = new URL(request.url);

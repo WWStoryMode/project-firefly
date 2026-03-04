@@ -4,11 +4,13 @@ Project Firefly uses three environments, each with its own Supabase project and 
 
 ## Overview
 
-| Environment | Trigger | Supabase Project | Demo Mode | URL |
-|---|---|---|---|---|
-| **Development** | `npm run dev` | `firefly-dev` | `true` | `localhost:3000` |
-| **Staging / QA** | PR opened → Vercel preview | `firefly-staging` | `true` | `pr-123.vercel.app` |
-| **Production** | Merge to `main` → Vercel prod | `firefly-prod` | `false` | `firefly.app` |
+| Environment | Trigger | Supabase Project | URL |
+|---|---|---|---|
+| **Development** | `npm run dev` | `firefly-dev` | `localhost:3000` |
+| **Staging / QA** | PR opened → Vercel preview | `firefly-staging` | `pr-123.vercel.app` |
+| **Production** | Merge to `main` → Vercel prod | `firefly-prod` | `firefly.app` |
+
+For demo purposes, use a separate Supabase project with seeded data (`supabase/seed.sql`). The same frontend code is used — only the Supabase URL and anon key differ.
 
 ## Supabase Projects
 
@@ -28,7 +30,6 @@ Create three separate Supabase projects. Each project is fully isolated with its
 |---|---|---|---|
 | Schema (migrations) | Yes | Yes | Yes |
 | Seed data (demo vendor, menu) | Yes | Yes | **No** |
-| Demo user IDs in data | Yes | Yes | **No** |
 
 ## Vercel Configuration
 
@@ -42,7 +43,6 @@ Every PR automatically gets a preview deployment. These use staging config:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://firefly-staging-ref.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Staging anon key |
-| `NEXT_PUBLIC_DEMO_MODE` | `true` |
 
 Set these with the **Preview** environment checkbox in Vercel.
 
@@ -54,7 +54,6 @@ Merges to `main` auto-deploy to production:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://firefly-prod-ref.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Prod anon key |
-| `NEXT_PUBLIC_DEMO_MODE` | `false` |
 
 Set these with the **Production** environment checkbox in Vercel.
 
@@ -69,22 +68,9 @@ Set these with the **Production** environment checkbox in Vercel.
    ```
    NEXT_PUBLIC_SUPABASE_URL=https://your-dev-ref.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-dev-anon-key
-   NEXT_PUBLIC_DEMO_MODE=true
    ```
 
 3. Start the dev server:
    ```bash
    npm run dev
    ```
-
-## Demo Mode Behavior
-
-When `NEXT_PUBLIC_DEMO_MODE=true`:
-- A yellow "DEMO MODE" banner appears at the top of every page
-- Hardcoded demo user IDs are used (no login required)
-- The landing page shows the role picker for testing all three roles
-
-When `NEXT_PUBLIC_DEMO_MODE=false`:
-- No demo banner
-- Real Supabase Auth is required (login/register flow)
-- API routes validate authentication tokens

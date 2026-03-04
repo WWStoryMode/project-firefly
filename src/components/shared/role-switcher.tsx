@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Sheet,
@@ -11,6 +12,12 @@ import {
 import { useRole } from '@/hooks/use-role';
 import type { UserRole } from '@/types';
 import { cn } from '@/lib/utils';
+
+const roleRoutes: Record<UserRole, string> = {
+  customer: '/vendors',
+  vendor: '/vendor',
+  delivery: '/delivery',
+};
 
 interface RoleSwitcherProps {
   userInitials?: string;
@@ -39,6 +46,12 @@ export function RoleSwitcher({
   availableRoles = ['customer', 'vendor', 'delivery'],
 }: RoleSwitcherProps) {
   const { currentRole, setRole, roleColor } = useRole();
+  const router = useRouter();
+
+  const handleRoleSwitch = (role: UserRole) => {
+    setRole(role);
+    router.push(roleRoutes[role]);
+  };
 
   return (
     <Sheet>
@@ -73,7 +86,7 @@ export function RoleSwitcher({
           {availableRoles.map((role) => (
             <button
               key={role}
-              onClick={() => setRole(role)}
+              onClick={() => handleRoleSwitch(role)}
               className={cn(
                 'w-full p-4 rounded-lg border-2 text-left transition-colors',
                 currentRole === role

@@ -7,6 +7,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   ReactNode,
 } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
@@ -76,7 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  return <ProductionAuthProvider>{children}</ProductionAuthProvider>;
+  return (
+    <ProductionAuthProvider currentRole={currentRole}>
+      {children}
+    </ProductionAuthProvider>
+  );
 }
 
 function DemoAuthProvider({
@@ -104,11 +109,18 @@ function DemoAuthProvider({
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-function ProductionAuthProvider({ children }: { children: ReactNode }) {
+function ProductionAuthProvider({
+  children,
+  currentRole,
+}: {
+  children: ReactNode;
+  currentRole: UserRole;
+}) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AuthContextType['user']>(null);
   const [vendorId, setVendorId] = useState<string | null>(null);
   const [deliveryPersonId, setDeliveryPersonId] = useState<string | null>(null);
+  const provisioningRef = useRef<string | null>(null);
   const supabase = useMemo(() => {
     if (typeof window === 'undefined') return null;
     return createClient();
@@ -135,25 +147,21 @@ function ProductionAuthProvider({ children }: { children: ReactNode }) {
           default_role: profile.default_role,
         });
 
-        // Fetch vendor record if user has vendor role
-        if (profile.roles?.includes('vendor')) {
-          const { data: vendor } = await supabase
-            .from('vendors')
-            .select('id')
-            .eq('user_id', profile.id)
-            .single();
-          setVendorId(vendor?.id || null);
-        }
+        // Eagerly fetch vendor record regardless of user.roles
+        const { data: vendor } = await supabase
+          .from('vendors')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+        setVendorId(vendor?.id || null);
 
-        // Fetch delivery person record if user has delivery role
-        if (profile.roles?.includes('delivery')) {
-          const { data: dp } = await supabase
-            .from('delivery_persons')
-            .select('id')
-            .eq('user_id', profile.id)
-            .single();
-          setDeliveryPersonId(dp?.id || null);
-        }
+        // Eagerly fetch delivery person record regardless of user.roles
+        const { data: dp } = await supabase
+          .from('delivery_persons')
+          .select('id')
+          .eq('user_id', profile.id)
+          .single();
+        setDeliveryPersonId(dp?.id || null);
       }
     },
     [supabase]
@@ -188,6 +196,59 @@ function ProductionAuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [supabase, fetchUserProfile]);
+
+  // Lazy provisioning: auto-create vendor/delivery records when role switches
+  useEffect(() => {
+    if (!supabase || !user) return;
+
+    if (currentRole === 'vendor' && !vendorId) {
+      // Prevent duplicate provisioning
+      if (provisioningRef.current === 'vendor') return;
+      provisioningRef.current = 'vendor';
+
+      supabase
+        .from('vendors')
+        .insert({
+          user_id: user.id,
+          name: `${user.name}'s Kitchen`,
+          is_active: true,
+        })
+        .select('id')
+        .single()
+        .then(({ data, error }) => {
+          if (data) {
+            setVendorId(data.id);
+          } else if (error) {
+            console.error('Failed to provision vendor:', error);
+          }
+          provisioningRef.current = null;
+        });
+    }
+
+    if (currentRole === 'delivery' && !deliveryPersonId) {
+      if (provisioningRef.current === 'delivery') return;
+      provisioningRef.current = 'delivery';
+
+      supabase
+        .from('delivery_persons')
+        .insert({
+          user_id: user.id,
+          is_active: true,
+          is_available: true,
+          vehicle_type: 'bike',
+        })
+        .select('id')
+        .single()
+        .then(({ data, error }) => {
+          if (data) {
+            setDeliveryPersonId(data.id);
+          } else if (error) {
+            console.error('Failed to provision delivery person:', error);
+          }
+          provisioningRef.current = null;
+        });
+    }
+  }, [supabase, user, currentRole, vendorId, deliveryPersonId]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {

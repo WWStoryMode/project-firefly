@@ -4,6 +4,7 @@ import "./globals.css";
 import { RoleProvider } from "@/hooks/use-role";
 import { AuthProvider } from "@/hooks/use-auth";
 import { CartProvider } from "@/hooks/use-cart";
+import { AppHeader } from "@/components/shared/app-header";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,13 +39,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && (
-          <div className="bg-amber-500 text-white text-center text-xs py-1">
-            DEMO MODE
-          </div>
-        )}
         <RoleProvider>
           <AuthProvider>
+            <AppHeader />
             <CartProvider>
               {children}
             </CartProvider>

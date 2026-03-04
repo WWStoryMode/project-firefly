@@ -17,8 +17,19 @@ interface DeliveryOrder extends OrderWithDetails {
 
 export default function DeliveryDashboard() {
   const { deliveryPersonId } = useAuth();
-  const { assignments, loading, error } = useDeliveryAssignments(deliveryPersonId!);
+  const { assignments, loading, error } = useDeliveryAssignments(deliveryPersonId ?? '');
   const [updating, setUpdating] = useState<string | null>(null);
+
+  if (!deliveryPersonId) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">Setting up delivery account...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleStatusUpdate = async (
     assignmentId: string,

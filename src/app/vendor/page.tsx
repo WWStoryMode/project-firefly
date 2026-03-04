@@ -18,8 +18,19 @@ interface VendorOrder extends OrderWithDetails {
 
 export default function VendorDashboard() {
   const { vendorId } = useAuth();
-  const { orders, loading, error } = useVendorOrders(vendorId!);
+  const { orders, loading, error } = useVendorOrders(vendorId ?? '');
   const [updating, setUpdating] = useState<string | null>(null);
+
+  if (!vendorId) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">Setting up vendor account...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleAcceptOrder = async (orderId: string) => {
     setUpdating(orderId);

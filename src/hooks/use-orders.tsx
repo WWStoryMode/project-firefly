@@ -69,6 +69,10 @@ export function useVendorOrders(vendorId: string) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!vendorId) {
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const { data, error: fetchError } = await supabase
       .from('orders')
@@ -139,6 +143,10 @@ export function useDeliveryAssignments(deliveryPersonId: string) {
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    if (!deliveryPersonId) {
+      setLoading(false);
+      return;
+    }
     const supabase = createClient();
     const { data, error: fetchError } = await supabase
       .from('delivery_assignments')

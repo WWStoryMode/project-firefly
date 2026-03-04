@@ -1,15 +1,19 @@
 'use client';
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingBag, Store, Truck, LogOut } from "lucide-react";
+import { ShoppingBag, Store, Truck } from "lucide-react";
 import { DEMO_MODE } from "@/lib/config/demo";
 import { useAuth } from "@/hooks/use-auth";
+import { useRole } from "@/hooks/use-role";
+import type { UserRole } from "@/types";
 
 const roles = [
   {
     name: "Customer",
+    role: "customer" as UserRole,
     description: "Browse local vendors, add items to your cart, and place orders for delivery.",
     href: "/vendors",
     icon: ShoppingBag,
@@ -19,6 +23,7 @@ const roles = [
   },
   {
     name: "Vendor",
+    role: "vendor" as UserRole,
     description: "View incoming orders, update order status, and communicate with customers.",
     href: "/vendor",
     icon: Store,
@@ -28,6 +33,7 @@ const roles = [
   },
   {
     name: "Delivery",
+    role: "delivery" as UserRole,
     description: "Accept delivery requests, navigate to pickups, and complete deliveries.",
     href: "/delivery",
     icon: Truck,
@@ -38,178 +44,150 @@ const roles = [
 ];
 
 export default function Home() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading } = useAuth();
+  const { setRole } = useRole();
+  const router = useRouter();
+
+  const handleRoleClick = (role: UserRole, href: string) => {
+    setRole(role);
+    router.push(href);
+  };
 
   if (!DEMO_MODE) {
     // Authenticated user: show role-based navigation
     if (user && !loading) {
       return (
-        <div className="min-h-screen bg-background">
-          <header className="border-b bg-background">
-            <div className="container flex h-16 items-center justify-between px-4">
-              <h1 className="text-2xl font-bold">Project Firefly</h1>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">{user.name}</span>
-                <Button variant="ghost" size="sm" onClick={signOut}>
-                  <LogOut className="h-4 w-4 mr-1" />
-                  Sign Out
-                </Button>
-              </div>
+        <main className="container px-4 py-8">
+          <div className="mx-auto max-w-3xl space-y-8">
+            <div className="text-center space-y-2">
+              <p className="text-lg text-muted-foreground">
+                Welcome back, {user.name}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Select a role to continue
+              </p>
             </div>
-          </header>
 
-          <main className="container px-4 py-8">
-            <div className="mx-auto max-w-3xl space-y-8">
-              <div className="text-center space-y-2">
-                <p className="text-lg text-muted-foreground">
-                  Welcome back, {user.name}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Select a role to continue
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                {roles.map((role) => (
-                  <Link key={role.name} href={role.href}>
-                    <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
-                      <CardHeader className="text-center pb-2">
-                        <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
-                          <role.icon className="h-6 w-6" />
-                        </div>
-                        <CardTitle className="text-lg">{role.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <CardDescription className="text-center">
-                          {role.description}
-                        </CardDescription>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+            <div className="grid gap-4 md:grid-cols-3">
+              {roles.map((role) => (
+                <button key={role.name} onClick={() => handleRoleClick(role.role, role.href)} className="text-left">
+                  <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
+                    <CardHeader className="text-center pb-2">
+                      <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                        <role.icon className="h-6 w-6" />
+                      </div>
+                      <CardTitle className="text-lg">{role.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription className="text-center">
+                        {role.description}
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+                </button>
+              ))}
             </div>
-          </main>
-        </div>
+          </div>
+        </main>
       );
     }
 
     // Not authenticated: show sign-in / create account
     return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b bg-background">
-          <div className="container flex h-16 items-center justify-center px-4">
-            <h1 className="text-2xl font-bold">Project Firefly</h1>
-          </div>
-        </header>
-
-        <main className="container px-4 py-8">
-          <div className="mx-auto max-w-md space-y-8 text-center">
-            <div className="space-y-2">
-              <p className="text-lg text-muted-foreground">
-                Community-powered food ordering for local co-ops
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Order from local vendors, delivered by your neighbors
-              </p>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {roles.map((role) => (
-                <div key={role.name} className="text-center">
-                  <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
-                    <role.icon className="h-6 w-6" />
-                  </div>
-                  <p className="text-sm font-medium">{role.name}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-3">
-              <Link href="/login">
-                <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-base">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button variant="outline" className="w-full h-12 text-base">
-                  Create Account
-                </Button>
-              </Link>
-              <Link href="/vendors">
-                <Button variant="ghost" className="w-full text-sm text-muted-foreground">
-                  Browse vendors without signing in
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-background">
-        <div className="container flex h-16 items-center justify-center px-4">
-          <h1 className="text-2xl font-bold">Project Firefly Demo</h1>
-        </div>
-      </header>
-
-      {/* Main Content */}
       <main className="container px-4 py-8">
-        <div className="mx-auto max-w-3xl space-y-8">
-          {/* Description */}
-          <div className="text-center space-y-2">
+        <div className="mx-auto max-w-md space-y-8 text-center">
+          <div className="space-y-2">
             <p className="text-lg text-muted-foreground">
               Community-powered food ordering for local co-ops
             </p>
             <p className="text-sm text-muted-foreground">
-              Select a role below to explore the demo
+              Order from local vendors, delivered by your neighbors
             </p>
           </div>
 
-          {/* Role Cards */}
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-3 gap-4">
             {roles.map((role) => (
-              <Link key={role.name} href={role.href}>
-                <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
-                  <CardHeader className="text-center pb-2">
-                    <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
-                      <role.icon className="h-6 w-6" />
-                    </div>
-                    <CardTitle className="text-lg">{role.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-center">
-                      {role.description}
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
+              <div key={role.name} className="text-center">
+                <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                  <role.icon className="h-6 w-6" />
+                </div>
+                <p className="text-sm font-medium">{role.name}</p>
+              </div>
             ))}
           </div>
 
-          {/* Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">How to Test the Full Flow</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                <li>Open <strong>3 browser tabs</strong> (or use incognito windows)</li>
-                <li>In Tab 1: Click <strong>Customer</strong> → Browse vendors and place an order</li>
-                <li>In Tab 2: Click <strong>Vendor</strong> → Watch for incoming orders and accept them</li>
-                <li>In Tab 3: Click <strong>Delivery</strong> → Accept the delivery and mark it complete</li>
-              </ol>
-              <p className="text-xs text-muted-foreground pt-2 border-t">
-                All roles see real-time updates via Supabase. Changes in one tab appear instantly in others.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-3">
+            <Link href="/login">
+              <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-base">
+                Sign In
+              </Button>
+            </Link>
+            <Link href="/register">
+              <Button variant="outline" className="w-full h-12 text-base">
+                Create Account
+              </Button>
+            </Link>
+            <Link href="/vendors">
+              <Button variant="ghost" className="w-full text-sm text-muted-foreground">
+                Browse vendors without signing in
+              </Button>
+            </Link>
+          </div>
         </div>
       </main>
-    </div>
+    );
+  }
+
+  // Demo mode
+  return (
+    <main className="container px-4 py-8">
+      <div className="mx-auto max-w-3xl space-y-8">
+        <div className="text-center space-y-2">
+          <p className="text-lg text-muted-foreground">
+            Community-powered food ordering for local co-ops
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Select a role below to explore the demo
+          </p>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {roles.map((role) => (
+            <button key={role.name} onClick={() => handleRoleClick(role.role, role.href)} className="text-left">
+              <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
+                <CardHeader className="text-center pb-2">
+                  <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                    <role.icon className="h-6 w-6" />
+                  </div>
+                  <CardTitle className="text-lg">{role.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-center">
+                    {role.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            </button>
+          ))}
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">How to Test the Full Flow</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+              <li>Open <strong>3 browser tabs</strong> (or use incognito windows)</li>
+              <li>In Tab 1: Click <strong>Customer</strong> → Browse vendors and place an order</li>
+              <li>In Tab 2: Click <strong>Vendor</strong> → Watch for incoming orders and accept them</li>
+              <li>In Tab 3: Click <strong>Delivery</strong> → Accept the delivery and mark it complete</li>
+            </ol>
+            <p className="text-xs text-muted-foreground pt-2 border-t">
+              All roles see real-time updates via Supabase. Changes in one tab appear instantly in others.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    </main>
   );
 }

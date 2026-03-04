@@ -12,7 +12,6 @@ import {
 } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
-import { DEMO_MODE, DEMO_IDS } from '@/lib/config/demo';
 import { useRole } from '@/hooks/use-role';
 import type { UserRole } from '@/types';
 
@@ -41,72 +40,14 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Demo user mappings from seed.sql
-const DEMO_USERS = {
-  customer: {
-    id: '00000000-0000-0000-0000-000000000001',
-    email: 'customer@demo.firefly',
-    name: 'Demo Customer',
-    roles: ['customer'] as UserRole[],
-    default_role: 'customer' as UserRole,
-  },
-  vendor: {
-    id: '00000000-0000-0000-0000-000000000002',
-    email: 'maria@demo.firefly',
-    name: 'Maria Garcia',
-    roles: ['vendor'] as UserRole[],
-    default_role: 'vendor' as UserRole,
-  },
-  delivery: {
-    id: '00000000-0000-0000-0000-000000000003',
-    email: 'alex@demo.firefly',
-    name: 'Alex Johnson',
-    roles: ['delivery'] as UserRole[],
-    default_role: 'delivery' as UserRole,
-  },
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { currentRole } = useRole();
-
-  if (DEMO_MODE) {
-    return (
-      <DemoAuthProvider currentRole={currentRole}>
-        {children}
-      </DemoAuthProvider>
-    );
-  }
 
   return (
     <ProductionAuthProvider currentRole={currentRole}>
       {children}
     </ProductionAuthProvider>
   );
-}
-
-function DemoAuthProvider({
-  children,
-  currentRole,
-}: {
-  children: ReactNode;
-  currentRole: UserRole;
-}) {
-  const value = useMemo<AuthContextType>(() => {
-    const demoUser = DEMO_USERS[currentRole];
-    return {
-      user: demoUser,
-      session: null,
-      loading: false,
-      signIn: async () => ({ error: null }),
-      signUp: async () => ({ error: null }),
-      signOut: async () => {},
-      userId: demoUser.id,
-      vendorId: DEMO_IDS.VENDOR_ID,
-      deliveryPersonId: DEMO_IDS.DELIVERY_PERSON_ID,
-    };
-  }, [currentRole]);
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 function ProductionAuthProvider({

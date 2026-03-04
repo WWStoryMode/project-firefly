@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Store, Truck } from "lucide-react";
-import { DEMO_MODE } from "@/lib/config/demo";
 import { useAuth } from "@/hooks/use-auth";
 import { useRole } from "@/hooks/use-role";
 import type { UserRole } from "@/types";
@@ -53,140 +52,85 @@ export default function Home() {
     router.push(href);
   };
 
-  if (!DEMO_MODE) {
-    // Authenticated user: show role-based navigation
-    if (user && !loading) {
-      return (
-        <main className="container px-4 py-8">
-          <div className="mx-auto max-w-3xl space-y-8">
-            <div className="text-center space-y-2">
-              <p className="text-lg text-muted-foreground">
-                Welcome back, {user.name}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Select a role to continue
-              </p>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              {roles.map((role) => (
-                <button key={role.name} onClick={() => handleRoleClick(role.role, role.href)} className="text-left">
-                  <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
-                    <CardHeader className="text-center pb-2">
-                      <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
-                        <role.icon className="h-6 w-6" />
-                      </div>
-                      <CardTitle className="text-lg">{role.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <CardDescription className="text-center">
-                        {role.description}
-                      </CardDescription>
-                    </CardContent>
-                  </Card>
-                </button>
-              ))}
-            </div>
-          </div>
-        </main>
-      );
-    }
-
-    // Not authenticated: show sign-in / create account
+  // Authenticated user: show role-based navigation
+  if (user && !loading) {
     return (
       <main className="container px-4 py-8">
-        <div className="mx-auto max-w-md space-y-8 text-center">
-          <div className="space-y-2">
+        <div className="mx-auto max-w-3xl space-y-8">
+          <div className="text-center space-y-2">
             <p className="text-lg text-muted-foreground">
-              Community-powered food ordering for local co-ops
+              Welcome back, {user.name}
             </p>
             <p className="text-sm text-muted-foreground">
-              Order from local vendors, delivered by your neighbors
+              Select a role to continue
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid gap-4 md:grid-cols-3">
             {roles.map((role) => (
-              <div key={role.name} className="text-center">
-                <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
-                  <role.icon className="h-6 w-6" />
-                </div>
-                <p className="text-sm font-medium">{role.name}</p>
-              </div>
+              <button key={role.name} onClick={() => handleRoleClick(role.role, role.href)} className="text-left">
+                <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
+                  <CardHeader className="text-center pb-2">
+                    <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                      <role.icon className="h-6 w-6" />
+                    </div>
+                    <CardTitle className="text-lg">{role.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription className="text-center">
+                      {role.description}
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </button>
             ))}
-          </div>
-
-          <div className="space-y-3">
-            <Link href="/login">
-              <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-base">
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="outline" className="w-full h-12 text-base">
-                Create Account
-              </Button>
-            </Link>
-            <Link href="/vendors">
-              <Button variant="ghost" className="w-full text-sm text-muted-foreground">
-                Browse vendors without signing in
-              </Button>
-            </Link>
           </div>
         </div>
       </main>
     );
   }
 
-  // Demo mode
+  // Not authenticated: show sign-in / create account
   return (
     <main className="container px-4 py-8">
-      <div className="mx-auto max-w-3xl space-y-8">
-        <div className="text-center space-y-2">
+      <div className="mx-auto max-w-md space-y-8 text-center">
+        <div className="space-y-2">
           <p className="text-lg text-muted-foreground">
             Community-powered food ordering for local co-ops
           </p>
           <p className="text-sm text-muted-foreground">
-            Select a role below to explore the demo
+            Order from local vendors, delivered by your neighbors
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-3 gap-4">
           {roles.map((role) => (
-            <button key={role.name} onClick={() => handleRoleClick(role.role, role.href)} className="text-left">
-              <Card className={`h-full transition-colors border-2 ${role.borderColor} ${role.hoverBg} cursor-pointer`}>
-                <CardHeader className="text-center pb-2">
-                  <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
-                    <role.icon className="h-6 w-6" />
-                  </div>
-                  <CardTitle className="text-lg">{role.name}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription className="text-center">
-                    {role.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </button>
+            <div key={role.name} className="text-center">
+              <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full ${role.color} text-white`}>
+                <role.icon className="h-6 w-6" />
+              </div>
+              <p className="text-sm font-medium">{role.name}</p>
+            </div>
           ))}
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">How to Test the Full Flow</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-              <li>Open <strong>3 browser tabs</strong> (or use incognito windows)</li>
-              <li>In Tab 1: Click <strong>Customer</strong> → Browse vendors and place an order</li>
-              <li>In Tab 2: Click <strong>Vendor</strong> → Watch for incoming orders and accept them</li>
-              <li>In Tab 3: Click <strong>Delivery</strong> → Accept the delivery and mark it complete</li>
-            </ol>
-            <p className="text-xs text-muted-foreground pt-2 border-t">
-              All roles see real-time updates via Supabase. Changes in one tab appear instantly in others.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="space-y-3">
+          <Link href="/login">
+            <Button className="w-full bg-green-600 hover:bg-green-700 h-12 text-base">
+              Sign In
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button variant="outline" className="w-full h-12 text-base">
+              Create Account
+            </Button>
+          </Link>
+          <Link href="/vendors">
+            <Button variant="ghost" className="w-full text-sm text-muted-foreground">
+              Browse vendors without signing in
+            </Button>
+          </Link>
+        </div>
       </div>
     </main>
   );

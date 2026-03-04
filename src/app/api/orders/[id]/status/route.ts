@@ -19,8 +19,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { error: authError, isDemoMode } = await getAuthenticatedUser();
-    if (!isDemoMode && authError) return unauthorizedResponse();
+    const { error: authError } = await getAuthenticatedUser();
+    if (authError) return unauthorizedResponse();
 
     const { id } = await params;
     const supabase = await createClient();
@@ -124,8 +124,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { error: authError, isDemoMode } = await getAuthenticatedUser();
-    if (!isDemoMode && authError) return unauthorizedResponse();
+    const { error: authError } = await getAuthenticatedUser();
+    if (authError) return unauthorizedResponse();
 
     const { id } = await params;
     const supabase = await createClient();

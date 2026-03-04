@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import { DEMO_MODE } from '@/lib/config/demo';
 import type { UserRole } from '@/types';
 
 type AuthMethod = 'email' | 'phone';
@@ -50,12 +49,6 @@ export default function RegisterPage() {
   const [role, setRole] = useState<UserRole>('customer');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  // Demo mode doesn't need registration
-  if (DEMO_MODE) {
-    router.push('/');
-    return null;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

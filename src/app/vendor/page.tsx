@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Store, Clock, ChefHat, Package, Loader2, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { Store, Clock, ChefHat, Package, Loader2, CheckCircle2, UtensilsCrossed, Settings } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -69,11 +70,26 @@ export default function VendorDashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-amber-600 text-white">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Store className="w-6 h-6" />
-            <div>
-              <h1 className="text-xl font-bold">Vendor Dashboard</h1>
-              <p className="text-sm text-amber-100">Maria&apos;s Kitchen</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Store className="w-6 h-6" />
+              <div>
+                <h1 className="text-xl font-bold">Vendor Dashboard</h1>
+                <p className="text-sm text-amber-100">Maria&apos;s Kitchen</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Link href="/vendor/menu">
+                <Button variant="outline" size="sm" className="bg-white text-amber-600 hover:bg-amber-50 border-white">
+                  <UtensilsCrossed className="w-4 h-4 mr-2" />
+                  Menu
+                </Button>
+              </Link>
+              <Link href="/vendor/settings">
+                <Button variant="outline" size="sm" className="bg-white text-amber-600 hover:bg-amber-50 border-white">
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

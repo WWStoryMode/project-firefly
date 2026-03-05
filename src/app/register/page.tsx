@@ -3,41 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, Phone, Lock, User, Loader2, ShoppingBag, Store, Truck } from 'lucide-react';
+import { Mail, Phone, Lock, User, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/use-auth';
-import type { UserRole } from '@/types';
-
 type AuthMethod = 'email' | 'phone';
-
-const roleOptions = [
-  {
-    value: 'customer' as UserRole,
-    label: 'Customer',
-    description: 'Order food from local vendors',
-    icon: ShoppingBag,
-    color: 'border-green-500 bg-green-50 dark:bg-green-950',
-    selectedColor: 'border-green-500 ring-2 ring-green-500',
-  },
-  {
-    value: 'vendor' as UserRole,
-    label: 'Vendor',
-    description: 'Sell food to the community',
-    icon: Store,
-    color: 'border-amber-500 bg-amber-50 dark:bg-amber-950',
-    selectedColor: 'border-amber-500 ring-2 ring-amber-500',
-  },
-  {
-    value: 'delivery' as UserRole,
-    label: 'Delivery',
-    description: 'Deliver orders in your area',
-    icon: Truck,
-    color: 'border-blue-500 bg-blue-50 dark:bg-blue-950',
-    selectedColor: 'border-blue-500 ring-2 ring-blue-500',
-  },
-];
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -46,7 +17,6 @@ export default function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('customer');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -62,7 +32,7 @@ export default function RegisterPage() {
     setLoading(true);
     setError(null);
 
-    const { error: signUpError } = await signUp(email.trim(), password, name.trim(), role);
+    const { error: signUpError } = await signUp(email.trim(), password, name.trim(), 'customer');
 
     if (signUpError) {
       setError(signUpError);
@@ -164,29 +134,6 @@ export default function RegisterPage() {
                   minLength={6}
                   required
                 />
-              </div>
-
-              {/* Role Selection */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">I want to...</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {roleOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setRole(opt.value)}
-                      className={`p-3 rounded-lg border-2 text-center transition-all ${
-                        role === opt.value ? opt.selectedColor : opt.color
-                      }`}
-                    >
-                      <opt.icon className="w-5 h-5 mx-auto mb-1" />
-                      <span className="text-xs font-medium block">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                  {roleOptions.find((o) => o.value === role)?.description}
-                </p>
               </div>
 
               {error && (

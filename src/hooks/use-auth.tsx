@@ -33,6 +33,7 @@ interface AuthContextType {
     role: UserRole
   ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  addRole: (role: UserRole) => Promise<void>;
   userId: string | null;
   vendorId: string | null;
   deliveryPersonId: string | null;
@@ -205,7 +206,7 @@ function ProductionAuthProvider({
   );
 
   const signUp = useCallback(
-    async (email: string, password: string, name: string, role: UserRole) => {
+    async (email: string, password: string, name: string, _role: UserRole) => {
       if (!supabase) return { error: 'Not initialized' };
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -214,39 +215,39 @@ function ProductionAuthProvider({
       if (error) return { error: error.message };
       if (!data.user) return { error: 'Sign up failed' };
 
-      // Create public.users record
+      // All new users start as customer
       const { error: profileError } = await supabase.from('users').insert({
         id: data.user.id,
         email,
         name,
         phone: '',
-        roles: [role],
-        default_role: role,
+        roles: ['customer'],
+        default_role: 'customer',
       });
 
       if (profileError) {
         return { error: 'Account created but profile setup failed. Please contact support.' };
       }
 
-      // Create role-specific records
-      if (role === 'vendor') {
-        await supabase.from('vendors').insert({
-          user_id: data.user.id,
-          name: `${name}'s Kitchen`,
-          is_active: true,
-        });
-      } else if (role === 'delivery') {
-        await supabase.from('delivery_persons').insert({
-          user_id: data.user.id,
-          is_active: true,
-          is_available: true,
-          vehicle_type: 'bike',
-        });
-      }
-
       return { error: null };
     },
     [supabase]
+  );
+
+  const addRole = useCallback(
+    async (role: UserRole) => {
+      if (!supabase || !user) return;
+      if (user.roles.includes(role)) return;
+      const newRoles = [...user.roles, role];
+      const { error } = await supabase
+        .from('users')
+        .update({ roles: newRoles })
+        .eq('id', user.id);
+      if (!error) {
+        setUser((prev) => (prev ? { ...prev, roles: newRoles } : prev));
+      }
+    },
+    [supabase, user]
   );
 
   const signOut = useCallback(async () => {
@@ -265,11 +266,12 @@ function ProductionAuthProvider({
       signIn,
       signUp,
       signOut,
+      addRole,
       userId: user?.id || null,
       vendorId,
       deliveryPersonId,
     }),
-    [user, session, loading, signIn, signUp, signOut, vendorId, deliveryPersonId]
+    [user, session, loading, signIn, signUp, signOut, addRole, vendorId, deliveryPersonId]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { RoleSwitcher } from '@/components/shared/role-switcher';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,12 @@ import { LogOut } from 'lucide-react';
 
 export function AppHeader() {
   const { user, loading, signOut } = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+  };
 
   const showRoleSwitcher = !loading && user;
 
@@ -22,7 +29,7 @@ export function AppHeader() {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {user.name}
             </span>
-            <Button variant="ghost" size="sm" onClick={signOut}>
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
             </Button>
             <RoleSwitcher

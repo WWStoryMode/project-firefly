@@ -11,7 +11,8 @@ export default async function VendorsPage() {
   const { data: vendors } = await supabase
     .from('vendors')
     .select('*')
-    .eq('is_active', true) as { data: Vendor[] | null };
+    .eq('is_active', true)
+    .order('created_at', { ascending: true }) as { data: Vendor[] | null };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">

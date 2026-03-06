@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Bike, Clock, MapPin, Store, Package, Truck, Home, Loader2, Check } from 'lucide-react';
+import Link from 'next/link';
+import { Bike, Clock, MapPin, Store, Package, Truck, Home, Loader2, Check, History } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -60,12 +61,20 @@ export default function DeliveryDashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-blue-600 text-white">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <Bike className="w-6 h-6" />
-            <div>
-              <h1 className="text-xl font-bold">Delivery Dashboard</h1>
-              <p className="text-sm text-blue-100">Alex Johnson</p>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <Bike className="w-6 h-6" />
+              <div>
+                <h1 className="text-xl font-bold">Delivery Dashboard</h1>
+                <p className="text-sm text-blue-100">Alex Johnson</p>
+              </div>
             </div>
+            <Link href="/delivery/history">
+              <Button variant="outline" size="sm" className="bg-white text-blue-600 hover:bg-blue-50 border-white">
+                <History className="w-4 h-4 mr-1" />
+                History
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -99,7 +108,7 @@ export default function DeliveryDashboard() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {assignments.map((assignment) => (
+            {assignments.filter((a) => a.order).map((assignment) => (
               <AssignmentCard
                 key={assignment.id}
                 assignment={assignment}
@@ -125,6 +134,7 @@ interface AssignmentCardProps {
 
 function AssignmentCard({ assignment, updating, onStatusUpdate }: AssignmentCardProps) {
   const order = assignment.order;
+  if (!order) return null;
   const vendorAccepted = order.vendor_accepted;
   const deliveryAccepted = assignment.status === 'accepted' || assignment.status === 'picked_up' || assignment.status === 'delivered';
 

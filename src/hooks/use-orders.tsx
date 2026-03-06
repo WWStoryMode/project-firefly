@@ -212,6 +212,103 @@ export function useDeliveryAssignments(deliveryPersonId: string) {
   return { assignments, loading, error, refresh };
 }
 
+// Hook for customer order history (all orders, newest first)
+export function useCustomerOrders(customerId: string) {
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!customerId) {
+      setLoading(false);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from('orders')
+      .select(`
+        *,
+        vendor:vendors(*),
+        items:order_items(*)
+      `)
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+      .then(({ data, error: fetchError }) => {
+        if (fetchError) setError(fetchError.message);
+        else setOrders(data as unknown as OrderWithDetails[]);
+        setLoading(false);
+      });
+  }, [customerId]);
+
+  return { orders, loading, error };
+}
+
+// Hook for vendor order history (completed + cancelled only)
+export function useVendorOrderHistory(vendorId: string) {
+  const [orders, setOrders] = useState<OrderWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!vendorId) {
+      setLoading(false);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from('orders')
+      .select(`
+        *,
+        items:order_items(*)
+      `)
+      .eq('vendor_id', vendorId)
+      .in('status', ['delivered', 'cancelled'])
+      .order('created_at', { ascending: false })
+      .then(({ data, error: fetchError }) => {
+        if (fetchError) setError(fetchError.message);
+        else setOrders(data as unknown as OrderWithDetails[]);
+        setLoading(false);
+      });
+  }, [vendorId]);
+
+  return { orders, loading, error };
+}
+
+// Hook for delivery person history (delivered assignments only)
+export function useDeliveryHistory(deliveryPersonId: string) {
+  const [assignments, setAssignments] = useState<(DeliveryAssignment & { order: OrderWithDetails })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!deliveryPersonId) {
+      setLoading(false);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .from('delivery_assignments')
+      .select(`
+        *,
+        order:orders(
+          *,
+          vendor:vendors(*),
+          items:order_items(*)
+        )
+      `)
+      .eq('delivery_person_id', deliveryPersonId)
+      .eq('status', 'delivered')
+      .order('delivered_at', { ascending: false })
+      .then(({ data, error: fetchError }) => {
+        if (fetchError) setError(fetchError.message);
+        else setAssignments(data as unknown as (DeliveryAssignment & { order: OrderWithDetails })[]);
+        setLoading(false);
+      });
+  }, [deliveryPersonId]);
+
+  return { assignments, loading, error };
+}
+
 // Update order status
 export async function updateOrderStatus(orderId: string, status: Order['status']) {
   const response = await fetch(`/api/orders/${orderId}/status`, {

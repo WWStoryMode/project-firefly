@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MapPin, ChevronRight } from 'lucide-react';
+import { MapPin, ChevronRight, ShoppingBag } from 'lucide-react';
 import type { Vendor } from '@/lib/supabase/types';
 
 export default async function VendorsPage() {
@@ -18,12 +18,22 @@ export default async function VendorsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Local Vendors
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Order from your community
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Local Vendors
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Order from your community
+              </p>
+            </div>
+            <Link href="/orders">
+              <Button variant="outline" size="sm" className="border-green-600 text-green-600 hover:bg-green-50 dark:border-green-400 dark:text-green-400">
+                <ShoppingBag className="w-4 h-4 mr-2" />
+                Orders
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 

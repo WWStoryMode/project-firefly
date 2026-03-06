@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Store, Clock, ChefHat, Package, Loader2, CheckCircle2, UtensilsCrossed, Settings } from 'lucide-react';
+import { Store, Clock, ChefHat, Package, Loader2, CheckCircle2, UtensilsCrossed, Settings, ClipboardList } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -83,6 +83,12 @@ export default function VendorDashboard() {
                 <Button variant="outline" size="sm" className="bg-white text-amber-600 hover:bg-amber-50 border-white">
                   <UtensilsCrossed className="w-4 h-4 mr-2" />
                   Menu
+                </Button>
+              </Link>
+              <Link href="/vendor/orders">
+                <Button variant="outline" size="sm" className="bg-white text-amber-600 hover:bg-amber-50 border-white">
+                  <ClipboardList className="w-4 h-4 mr-1" />
+                  History
                 </Button>
               </Link>
               <Link href="/vendor/settings">

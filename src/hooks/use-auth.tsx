@@ -90,20 +90,20 @@ function ProductionAuthProvider({
         });
 
         // Eagerly fetch vendor record regardless of user.roles
-        const { data: vendor } = await supabase
+        const { data: vendorRows } = await supabase
           .from('vendors')
           .select('id')
           .eq('user_id', profile.id)
-          .single();
-        setVendorId(vendor?.id || null);
+          .limit(1);
+        setVendorId(vendorRows?.[0]?.id || null);
 
         // Eagerly fetch delivery person record regardless of user.roles
-        const { data: dp } = await supabase
+        const { data: dpRows } = await supabase
           .from('delivery_persons')
           .select('id')
           .eq('user_id', profile.id)
-          .single();
-        setDeliveryPersonId(dp?.id || null);
+          .limit(1);
+        setDeliveryPersonId(dpRows?.[0]?.id || null);
       }
     },
     [supabase]
@@ -157,11 +157,22 @@ function ProductionAuthProvider({
         })
         .select('id')
         .single()
-        .then(({ data, error }) => {
+        .then(async ({ data, error }) => {
           if (data) {
             setVendorId(data.id);
           } else if (error) {
-            console.error('Failed to provision vendor:', error);
+            // Insert may have failed because the record already exists — try fetching it
+            const { data: existingRows } = await supabase
+              .from('vendors')
+              .select('id')
+              .eq('user_id', user.id)
+              .limit(1);
+            const existing = existingRows?.[0];
+            if (existing) {
+              setVendorId(existing.id);
+            } else {
+              console.error('Failed to provision vendor:', error);
+            }
           }
           provisioningRef.current = null;
         });
@@ -181,11 +192,22 @@ function ProductionAuthProvider({
         })
         .select('id')
         .single()
-        .then(({ data, error }) => {
+        .then(async ({ data, error }) => {
           if (data) {
             setDeliveryPersonId(data.id);
           } else if (error) {
-            console.error('Failed to provision delivery person:', error);
+            // Insert may have failed because the record already exists — try fetching it
+            const { data: existingRows } = await supabase
+              .from('delivery_persons')
+              .select('id')
+              .eq('user_id', user.id)
+              .limit(1);
+            const existing = existingRows?.[0];
+            if (existing) {
+              setDeliveryPersonId(existing.id);
+            } else {
+              console.error('Failed to provision delivery person:', error);
+            }
           }
           provisioningRef.current = null;
         });
@@ -211,24 +233,12 @@ function ProductionAuthProvider({
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: { data: { name } },
       });
       if (error) return { error: error.message };
       if (!data.user) return { error: 'Sign up failed' };
 
-      // All new users start as customer
-      const { error: profileError } = await supabase.from('users').insert({
-        id: data.user.id,
-        email,
-        name,
-        phone: '',
-        roles: ['customer'],
-        default_role: 'customer',
-      });
-
-      if (profileError) {
-        return { error: 'Account created but profile setup failed. Please contact support.' };
-      }
-
+      // Profile is created automatically via the handle_new_user DB trigger.
       return { error: null };
     },
     [supabase]
